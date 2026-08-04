@@ -11,6 +11,7 @@
   const status = document.getElementById("status");
   const importInput = document.getElementById("import-project");
   const overlayControl = document.getElementById("overlay");
+  const fretSpacingControl = document.getElementById("fret-spacing");
   const modeReferenceBody = document.getElementById("mode-reference-body");
   const cagedReference = document.getElementById("caged-reference");
   const pageViews = document.querySelectorAll("[data-page-view]");
@@ -22,6 +23,7 @@
     settings: {
       view: "combined",
       overlay: "none",
+      fretSpacing: "compact",
       overviewFocus: "all",
       overviewOverlay: "characteristic"
     },
@@ -61,6 +63,9 @@
     const normalized = structuredClone(candidate);
     if (normalized && normalized.settings && normalized.settings.overlay === undefined) {
       normalized.settings.overlay = "none";
+    }
+    if (normalized && normalized.settings && normalized.settings.fretSpacing === undefined) {
+      normalized.settings.fretSpacing = "compact";
     }
     if (normalized && normalized.settings && normalized.settings.overviewFocus === undefined) {
       normalized.settings.overviewFocus = "all";
@@ -104,6 +109,7 @@
     const overviewFocuses = new Set(["all", ...candidate.data.modes.map((mode) => mode.id)]);
     if (!["full", "combined", "pentatonic"].includes(candidate.settings.view)
       || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
+      || !["compact", "guitar", "wide"].includes(candidate.settings.fretSpacing)
       || !overviewFocuses.has(candidate.settings.overviewFocus)
       || !["none", "characteristic", "triad", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
@@ -242,6 +248,7 @@
   function applyControls() {
     document.querySelector(`input[name="view"][value="${project.settings.view}"]`).checked = true;
     overlayControl.value = project.settings.overlay;
+    fretSpacingControl.value = project.settings.fretSpacing;
     overviewFocusControl.value = project.settings.overviewFocus;
     overviewOverlayControl.value = project.settings.overviewOverlay;
     overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
@@ -347,7 +354,7 @@
   function exportSvg(modeId) {
     const mode = project.data.modes.find((candidate) => candidate.id === modeId);
     const markup = renderer.renderModeSvg(project.data, mode, project.settings);
-    const filename = `${renderer.exportFileStem(mode, project.settings.view, project.settings.overlay)}.svg`;
+    const filename = `${renderer.exportFileStem(mode, project.settings.view, project.settings.overlay, project.settings.fretSpacing)}.svg`;
     downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);
     status.textContent = `Exported ${mode.name} as ${filename}.`;
   }
@@ -432,6 +439,12 @@
 
   overlayControl.addEventListener("change", (event) => {
     project.settings.overlay = event.target.value;
+    saveProject();
+    render();
+  });
+
+  fretSpacingControl.addEventListener("change", (event) => {
+    project.settings.fretSpacing = event.target.value;
     saveProject();
     render();
   });

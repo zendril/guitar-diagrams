@@ -18,6 +18,7 @@ The editor provides:
 - a full-scale view with the pentatonic core emphasized;
 - a pentatonic-only view;
 - characteristic-tone, tonic-triad, and tonic-seventh learning highlights;
+- three switchable fret-spacing layouts for the individual boxes: compact equal, guitar-like tapered, and full-width;
 - interval-only marker labels, with note names retained in accessible descriptions;
 - standalone SVG export for each box;
 - one-diagram or seven-page vector printing/PDF;
@@ -47,6 +48,8 @@ npm test
 - Violet overview marker: modal tonic-triad target inside the focused contour.
 - Teal overview marker: note in the selected parent-major CAGED reference voicing.
 - Stepped contour: derived from the notes shown on each string.
+
+The individual diagrams default to a centered compact fretboard so the pattern is easier to read without shrinking note markers or string spacing. “Guitar-like” keeps that compact footprint but tapers consecutive fret widths by the physical 12-tone equal-temperament ratio. “Wide” preserves the original equal-fret, full-card layout for comparison. These spacing choices change only the drawing geometry, never the notes or intervals.
 
 The first six modes use the conventional major or minor pentatonic subset for their tonic. F♯ Locrian uses the explicitly project-defined Locrian-compatible subset `1 ♭3 4 ♭5 ♭7`, since ordinary F♯ minor pentatonic would contain C♯ rather than Locrian's C natural. There is no single universally standard “Locrian pentatonic.”
 

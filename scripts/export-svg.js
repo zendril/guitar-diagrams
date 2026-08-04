@@ -16,7 +16,7 @@ for (const target of targets) {
   const directory = path.join(root, "exports", target.directory);
   fs.mkdirSync(directory, { recursive: true });
   for (const mode of data.modes) {
-    const markup = renderer.renderModeSvg(data, mode, { view: target.view });
+    const markup = renderer.renderModeSvg(data, mode, { view: target.view, fretSpacing: "compact" });
     const filename = `${renderer.exportFileStem(mode, target.view)}.svg`;
     fs.writeFileSync(path.join(directory, filename), `<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "utf8");
   }

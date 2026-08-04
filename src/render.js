@@ -8,6 +8,7 @@
   const WIDTH = 960;
   const HEIGHT = 390;
   const PLOT = { left: 108, right: 918, top: 138, bottom: 286 };
+  const COMPACT_FRETBOARD = { left: 180, right: 780 };
   const MODE_MARKER_GEOMETRY = Object.freeze({
     radius: 12,
     discStrokeWidth: 1.8,
@@ -23,6 +24,7 @@
   const VALID_VIEWS = new Set(["full", "combined", "pentatonic"]);
   const VALID_OVERLAYS = new Set(["none", "characteristic", "triad", "seventh"]);
   const VALID_OVERVIEW_OVERLAYS = new Set(["none", "characteristic", "triad", "caged"]);
+  const VALID_FRET_SPACINGS = new Set(["compact", "guitar", "wide"]);
 
   const esc = (value) => String(value)
     .replaceAll("&", "&amp;")
@@ -34,6 +36,35 @@
 
   const normalizeView = (view) => VALID_VIEWS.has(view) ? view : "combined";
   const normalizeOverlay = (overlay) => VALID_OVERLAYS.has(overlay) ? overlay : "none";
+  const normalizeFretSpacing = (spacing) => VALID_FRET_SPACINGS.has(spacing) ? spacing : "compact";
+
+  function modeFretGeometry(minFret, maxFret, requestedSpacing) {
+    const spacing = normalizeFretSpacing(requestedSpacing);
+    const fretCount = maxFret - minFret + 1;
+    const left = spacing === "wide" ? PLOT.left : COMPACT_FRETBOARD.left;
+    const right = spacing === "wide" ? PLOT.right : COMPACT_FRETBOARD.right;
+    const availableWidth = right - left;
+    const weights = Array.from({ length: fretCount }, (_, index) => spacing === "guitar"
+      ? 2 ** (-(minFret + index) / 12)
+      : 1);
+    const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
+    const widths = weights.map((weight) => availableWidth * weight / weightTotal);
+    const boundaries = [left];
+    for (const width of widths) boundaries.push(boundaries.at(-1) + width);
+    boundaries[boundaries.length - 1] = right;
+    const centers = widths.map((width, index) => boundaries[index] + width / 2);
+
+    return {
+      spacing,
+      left,
+      right,
+      widths,
+      boundaries,
+      centers,
+      minCellWidth: Math.min(...widths),
+      xForFret: (fret) => centers[fret - minFret]
+    };
+  }
 
   function pitchClass(openPitchClass, fret) {
     return (openPitchClass + fret) % 12;
@@ -346,6 +377,7 @@
   function renderModeSvg(data, mode, options = {}) {
     const view = normalizeView(options.view);
     const overlay = normalizeOverlay(options.overlay);
+    const fretSpacing = normalizeFretSpacing(options.fretSpacing);
     const overlayInfo = overlayFor(mode, overlay);
     const overlayDegrees = new Set(overlayInfo.degrees);
     const entriesByString = collectEntries(data, mode, view);
@@ -357,9 +389,9 @@
     const minFret = Math.min(...originalFrets);
     const maxFret = Math.max(...originalFrets);
     const fretCount = maxFret - minFret + 1;
-    const cellWidth = (PLOT.right - PLOT.left) / fretCount;
+    const fretGeometry = modeFretGeometry(minFret, maxFret, fretSpacing);
     const stringSpacing = (PLOT.bottom - PLOT.top) / (data.strings.length - 1);
-    const xForFret = (fret) => PLOT.left + ((fret - minFret) + 0.5) * cellWidth;
+    const xForFret = fretGeometry.xForFret;
     const yForString = (index) => PLOT.top + index * stringSpacing;
     const titleId = `${mode.id}-${view}-title`;
     const descId = `${mode.id}-${view}-desc`;
@@ -390,10 +422,15 @@
     const overlayDescription = overlay === "none"
       ? ""
       : ` ${overlayInfo.heading} highlights degrees ${overlayInfo.degrees.map(prettyDegree).join(", ")}.${hiddenOverlayDegrees.length ? ` Degrees ${hiddenOverlayDegrees.map(prettyDegree).join(", ")} are not displayed in this view.` : ""}`;
+    const fretSpacingDescription = fretSpacing === "wide"
+      ? " Frets use the full-width equal-spacing layout."
+      : fretSpacing === "guitar"
+        ? " Fret widths taper by the guitar's twelve-tone equal-temperament ratio within this position."
+        : " Frets use the centered compact equal-spacing layout.";
 
     const fretLines = [];
-    for (let fret = minFret; fret <= maxFret + 1; fret += 1) {
-      const x = PLOT.left + (fret - minFret) * cellWidth;
+    for (let boundaryIndex = 0; boundaryIndex <= fretCount; boundaryIndex += 1) {
+      const x = fretGeometry.boundaries[boundaryIndex];
       fretLines.push(`<line class="fret" x1="${x}" y1="${PLOT.top - 21}" x2="${x}" y2="${PLOT.bottom + 21}"/>`);
     }
 
@@ -406,8 +443,8 @@
       const y = yForString(index);
       const thickness = (1 + index * 0.28).toFixed(2);
       return [
-        `<line class="string" style="stroke-width:${thickness}px" x1="${PLOT.left}" y1="${y}" x2="${PLOT.right}" y2="${y}"/>`,
-        `<text class="string-label" x="${PLOT.left - 28}" y="${y + 1}">${string.number} · ${esc(string.name)}</text>`
+        `<line class="string" style="stroke-width:${thickness}px" x1="${fretGeometry.left}" y1="${y}" x2="${fretGeometry.right}" y2="${y}"/>`,
+        `<text class="string-label" x="${fretGeometry.left - 28}" y="${y + 1}">${string.number} · ${esc(string.name)}</text>`
       ].join("");
     }).join("");
 
@@ -425,7 +462,7 @@
         + "</g>";
     }).join("");
 
-    const outline = pathForOutline(entriesByString, xForFret, yForString, cellWidth);
+    const outline = pathForOutline(entriesByString, xForFret, yForString, fretGeometry.minCellWidth);
     const legendItems = view === "full"
       ? [{ kind: "equal", label: "mode note" }]
       : view === "pentatonic"
@@ -444,9 +481,9 @@
       return `<g transform="translate(${x} 0)"><circle class="legend-${item.kind}" cx="0" cy="0" r="8"/><text class="legend-text" x="15" y="1">${item.label}</text></g>`;
     }).join("")}</g>`;
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="10in" height="4.0625in" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-labelledby="${titleId} ${descId}" data-mode-id="${mode.id}" data-view="${view}" data-overlay="${overlay}">`
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="10in" height="4.0625in" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-labelledby="${titleId} ${descId}" data-mode-id="${mode.id}" data-view="${view}" data-overlay="${overlay}" data-fret-spacing="${fretSpacing}">`
       + `<title id="${titleId}">${esc(mode.tonic)} ${esc(mode.name)} — ${viewDisplayName(view)}${overlay === "none" ? "" : ` — ${overlayInfo.accessible}`}</title>`
-      + `<desc id="${descId}">${esc(`${description}${overlayDescription} ${inventory}`)}</desc>`
+      + `<desc id="${descId}">${esc(`${description}${overlayDescription}${fretSpacingDescription} ${inventory}`)}</desc>`
       + `<style>
         svg{background:#fff;color:#111827;font-family:Inter,Segoe UI,Arial,sans-serif;text-rendering:geometricPrecision}
         text{fill:#111827}
@@ -471,12 +508,14 @@
       + "</svg>";
   }
 
-  function exportFileStem(mode, requestedView, requestedOverlay = "none") {
+  function exportFileStem(mode, requestedView, requestedOverlay = "none", requestedFretSpacing = "compact") {
     const tonic = mode.tonic.toLowerCase().replace("♯", "s").replace("♭", "b");
     const view = normalizeView(requestedView);
     const overlay = normalizeOverlay(requestedOverlay);
+    const fretSpacing = normalizeFretSpacing(requestedFretSpacing);
     const viewSuffix = view === "full" ? "scale" : view === "pentatonic" ? "pentatonic" : "scale-pentatonic-emphasis";
-    return `${tonic}-${mode.name.toLowerCase()}-${viewSuffix}${overlay === "none" ? "" : `-${overlay}`}`;
+    const spacingSuffix = fretSpacing === "compact" ? "" : `-${fretSpacing}-spacing`;
+    return `${tonic}-${mode.name.toLowerCase()}-${viewSuffix}${overlay === "none" ? "" : `-${overlay}`}${spacingSuffix}`;
   }
 
   function overviewFileStem(data, requestedFocus) {
@@ -497,7 +536,9 @@
     overviewFileStem,
     normalizeView,
     normalizeOverlay,
+    normalizeFretSpacing,
     normalizeOverviewOverlay,
+    modeFretGeometry,
     modeMarkerGeometry: MODE_MARKER_GEOMETRY
   };
 }));

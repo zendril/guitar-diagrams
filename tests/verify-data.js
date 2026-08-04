@@ -8,6 +8,7 @@ const renderer = require("../src/render.js");
 
 const views = ["full", "combined", "pentatonic"];
 const overlays = ["none", "characteristic", "triad", "seventh"];
+const fretSpacings = ["compact", "guitar", "wide"];
 const occurrences = (markup, needle) => (markup.match(new RegExp(needle, "g")) || []).length;
 
 assert.equal(data.schemaVersion, 1);
@@ -144,10 +145,35 @@ for (const mode of data.modes) {
     }
   }
   assert.equal(exportStems.size, views.length * overlays.length, `${mode.name} view/overlay exports must have unique filenames`);
+
+  const spacingExportStems = new Set();
+  for (const fretSpacing of fretSpacings) {
+    const spacingSvg = renderer.renderModeSvg(data, mode, { view: "combined", fretSpacing });
+    const modeFrets = mode.fretsByString.flat();
+    const geometry = renderer.modeFretGeometry(Math.min(...modeFrets), Math.max(...modeFrets), fretSpacing);
+    assert(spacingSvg.includes(`data-fret-spacing="${fretSpacing}"`), `${mode.name} must expose its ${fretSpacing} fret spacing`);
+    assert(geometry.minCellWidth > 2 * tonicOuterRadius, `${mode.name} ${fretSpacing} frets must keep adjacent markers apart`);
+    spacingExportStems.add(renderer.exportFileStem(mode, "combined", "none", fretSpacing));
+  }
+  assert.equal(spacingExportStems.size, fretSpacings.length, `${mode.name} spacing exports must have unique filenames`);
 }
 
 assert.equal(renderer.normalizeView("not-a-view"), "combined");
 assert.equal(renderer.normalizeOverlay("not-an-overlay"), "none");
+assert.equal(renderer.normalizeFretSpacing("not-a-spacing"), "compact");
+
+const compactGeometry = renderer.modeFretGeometry(2, 5, "compact");
+const guitarGeometry = renderer.modeFretGeometry(2, 5, "guitar");
+const wideGeometry = renderer.modeFretGeometry(2, 5, "wide");
+assert.equal(compactGeometry.left, 180);
+assert.equal(compactGeometry.right, 780);
+assert(compactGeometry.widths.every((width) => Math.abs(width - 150) < 1e-9), "Compact layout must use four equal 150-unit frets");
+assert.equal(wideGeometry.left, 108);
+assert.equal(wideGeometry.right, 918);
+assert(wideGeometry.widths.every((width) => Math.abs(width - 202.5) < 1e-9), "Wide layout must preserve the original full-card spacing");
+assert(guitarGeometry.widths.every((width, index, widths) => index === 0 || width < widths[index - 1]), "Guitar-like fret widths must taper toward the bridge");
+assert(Math.abs(guitarGeometry.widths[1] / guitarGeometry.widths[0] - (2 ** (-1 / 12))) < 1e-9, "Guitar-like frets must use the twelve-tone equal-temperament ratio");
+assert(Math.abs(guitarGeometry.widths.reduce((sum, width) => sum + width, 0) - 600) < 1e-9, "Guitar-like layout must retain the compact overall footprint");
 
 const phrygian = data.modes.find((mode) => mode.id === "b-phrygian");
 const lydian = data.modes.find((mode) => mode.id === "c-lydian");
@@ -319,11 +345,15 @@ assert(indexHtml.includes('href="#map"'), "Primary navigation must link to the d
 assert(indexHtml.includes('href="#cheat-sheet"'), "Primary navigation must link to the theory cheat sheet");
 assert(indexHtml.includes('id="mode-reference-body"'), "The cheat sheet must include the data-driven seven-mode reference table");
 assert(indexHtml.includes('id="overview-overlay"'), "The connected overview must offer one compact position-overlay selector");
+assert(indexHtml.includes('id="fret-spacing"'), "Individual boxes must offer a fret-spacing selector");
+assert(indexHtml.includes('<option value="guitar">Guitar-like — tapered frets</option>'), "Fret spacing must offer a guitar-proportional comparison");
 assert(indexHtml.includes('<option value="triad">Modal tonic chord tones</option>'), "The position overlay must offer modal tonic chord tones");
 assert(indexHtml.includes('value="caged"'), "The position overlay must offer parent-major CAGED chord tones");
 assert(indexHtml.includes("CAGED is five overlapping fretboard regions"), "The cheat sheet must explain CAGED as a location framework");
 assert(indexHtml.includes("Every mode can be played in every usable CAGED region"), "The cheat sheet must prevent fixed mode-to-CAGED assignments");
 assert(appSource.includes('window.addEventListener("hashchange"'), "Page navigation must respond to browser Back and Forward");
+assert(appSource.includes('normalized.settings.fretSpacing = "compact"'), "Saved projects must migrate to the compact fret layout");
+assert(appSource.includes('fretSpacingControl.addEventListener("change"'), "Fret-spacing changes must rerender the individual boxes");
 assert(appSource.includes("renderTheoryReference();"), "Theory reference rows must update with imported project data");
 
-console.log("Verified the connected CAGED/modal-tonic overview, seven modal boxes, and two-view theory reference.");
+console.log("Verified the connected overview, three fret-spacing layouts, seven modal boxes, and two-view theory reference.");
