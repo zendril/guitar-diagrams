@@ -35,6 +35,11 @@ const parentChordPitchClasses = new Set([
   data.parentScale.pitchClasses[2],
   data.parentScale.pitchClasses[4]
 ]);
+const parentChordDegreeByPitchClass = new Map([
+  [data.parentScale.pitchClasses[0], "1"],
+  [data.parentScale.pitchClasses[2], "3"],
+  [data.parentScale.pitchClasses[4], "5"]
+]);
 for (const family of data.positionFamilies) {
   const familyModes = data.modes.filter((mode) => mode.position === family.position);
   for (const [stringIndex, frets] of family.chordFretsByString.entries()) {
@@ -215,6 +220,7 @@ for (const focusMode of overviewFocuses) {
       assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), 0, "All-position overview must not imply one mode's characteristic tones");
       assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), 0, "All-position overview must not imply one mode's tonic chord");
       assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), 0, "All-position overview must not imply a single CAGED voicing");
+      assert.equal(occurrences(overview, 'data-overview-caged-degree="'), 0, "All-position overview must not use chord-relative marker labels");
     } else {
       assert(overview.includes(`data-active-contour="${selectedMode.id}"`), `${selectedMode.name} must draw its exact selected contour`);
       let expectedRoots = 0;
@@ -246,6 +252,45 @@ for (const focusMode of overviewFocuses) {
         ? selectedFamily.chordFretsByString.reduce((total, frets) => total + frets.length, 0)
         : 0;
       assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), expectedCagedNotes, `${selectedMode.name} must highlight exactly one parent-major ${selectedFamily.cagedForm}-form voicing`);
+      const expectedCagedDegreeCounts = new Map([["1", 0], ["3", 0], ["5", 0]]);
+      if (overlay === "caged") {
+        for (const [stringIndex, frets] of selectedFamily.chordFretsByString.entries()) {
+          for (const fret of frets) {
+            const pc = (data.strings[stringIndex].openPitchClass + fret) % 12;
+            const degree = parentChordDegreeByPitchClass.get(pc);
+            expectedCagedDegreeCounts.set(degree, expectedCagedDegreeCounts.get(degree) + 1);
+          }
+        }
+      }
+      for (const [degree, expectedCount] of expectedCagedDegreeCounts) {
+        assert.equal(occurrences(overview, `data-overview-caged-degree="${degree}"`), expectedCount, `${selectedMode.name} ${selectedFamily.cagedForm}-form must label its parent-major ${degree} correctly`);
+      }
+      const renderedCagedDegreePairs = [...overview.matchAll(/data-overview-caged-degree="([135])"[^>]*>.*?<text class="overview-degree"[^>]*>([135])<\/text>/g)];
+      assert.equal(renderedCagedDegreePairs.length, expectedCagedNotes, `${selectedMode.name} must visibly render every CAGED chord degree`);
+      assert(renderedCagedDegreePairs.every((match) => match[1] === match[2]), `${selectedMode.name} CAGED marker text must match its parent-major chord degree`);
+      const cagedFretKeys = new Set();
+      if (overlay === "caged") {
+        selectedFamily.chordFretsByString.forEach((frets, stringIndex) => {
+          frets.forEach((fret) => cagedFretKeys.add(`${stringIndex}:${fret}`));
+        });
+      }
+      const expectedDisplayedDegrees = data.strings.flatMap((string, stringIndex) => {
+        const degrees = [];
+        for (let fret = overviewMinFret; fret <= overviewMaxFret; fret += 1) {
+          const pc = (string.openPitchClass + fret) % 12;
+          if (!data.parentScale.pitchClasses.includes(pc)) continue;
+          const modalDegree = renderer.prettyDegree(renderer.toneFor(selectedMode, pc).degree);
+          degrees.push(cagedFretKeys.has(`${stringIndex}:${fret}`) ? parentChordDegreeByPitchClass.get(pc) : modalDegree);
+        }
+        return degrees;
+      });
+      const renderedDisplayedDegrees = [...overview.matchAll(/<text class="overview-degree"[^>]*>([^<]+)<\/text>/g)].map((match) => match[1]);
+      assert.deepEqual(renderedDisplayedDegrees, expectedDisplayedDegrees, `${selectedMode.name} must use parent degrees only on teal CAGED notes and modal degrees everywhere else`);
+      if (overlay === "caged") {
+        assert(overview.includes(`${data.parentScale.tonic} major chord = teal 1 · 3 · 5`), `${selectedMode.name} CAGED caption must disclose its chord-relative labels`);
+        assert(overview.includes(`rings mark ${selectedMode.tonic} tonic`), `${selectedMode.name} CAGED caption must identify the modal tonic rings`);
+        assert(overview.includes("all other interval labels remain relative"), `${selectedMode.name} CAGED description must disclose the two reference frames`);
+      }
       for (const mode of data.modes) {
         const family = data.positionFamilies.find((candidate) => candidate.position === mode.position);
         const expectedAnchorLabel = overlay === "caged"

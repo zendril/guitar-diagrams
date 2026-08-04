@@ -180,6 +180,11 @@
     const familyModes = data.modes.filter((mode, index, modes) => modes
       .findIndex((candidate) => candidate.position === mode.position) === index);
     const parentPitchClasses = new Set(data.parentScale.pitchClasses);
+    const parentChordDegreeByPitchClass = new Map([
+      [data.parentScale.pitchClasses[0], "1"],
+      [data.parentScale.pitchClasses[2], "3"],
+      [data.parentScale.pitchClasses[4], "5"]
+    ]);
 
     const fretLines = [];
     for (let fret = minFret; fret <= maxFret + 1; fret += 1) {
@@ -238,7 +243,11 @@
         const isModalTonicChord = Boolean(focusMode && overviewOverlay === "triad" && insideFocus
           && modalTonicDegrees.has(tone.degree));
         const isCagedChord = cagedChordFrets.has(`${stringIndex}:${fret}`);
-        entries.push({ string, stringIndex, fret, pc, tone, insideFocus, isRoot, isCharacteristic, isModalTonicChord, isCagedChord });
+        const cagedDegree = isCagedChord ? parentChordDegreeByPitchClass.get(pc) : null;
+        if (isCagedChord && !cagedDegree) {
+          throw new Error(`CAGED reference note on string ${string.number}, fret ${fret} is not in the parent-major triad`);
+        }
+        entries.push({ string, stringIndex, fret, pc, tone, insideFocus, isRoot, isCharacteristic, isModalTonicChord, isCagedChord, cagedDegree });
       }
       return entries;
     }).map((entry) => {
@@ -252,12 +261,15 @@
         entry.isModalTonicChord ? "modal-tonic-chord" : "",
         entry.isCagedChord ? "caged-chord" : ""
       ].filter(Boolean).join(" ");
-      const accessible = `String ${entry.string.number}, fret ${entry.fret}, ${data.pitchClassNames[entry.pc]}, ${labelMode.name} degree ${prettyDegree(entry.tone.degree)}${entry.insideFocus ? ", inside the selected contour" : ""}${entry.isRoot ? ", tonic" : ""}${entry.isCharacteristic ? ", characteristic tone" : ""}${entry.isModalTonicChord ? `, part of the ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} modal tonic triad` : ""}${entry.isCagedChord ? `, part of the ${focusFamily.cagedForm}-form parent-major chord reference shape` : ""}`;
-      return `<g class="${classes}" data-overview-note="true"${entry.insideFocus ? ' data-inside-focus="true"' : ""}${entry.isRoot ? ' data-overview-root="true"' : ""}${entry.isCharacteristic ? ' data-overview-characteristic="true"' : ""}${entry.isModalTonicChord ? ' data-overview-modal-tonic-chord="true"' : ""}${entry.isCagedChord ? ' data-overview-caged-chord="true"' : ""} transform="translate(${x} ${y})">`
+      const degreeDescription = entry.isCagedChord
+        ? `${data.parentScale.tonic} major chord degree ${entry.cagedDegree}, displayed; ${labelMode.tonic} ${labelMode.name} degree ${prettyDegree(entry.tone.degree)}`
+        : `${labelMode.tonic} ${labelMode.name} degree ${prettyDegree(entry.tone.degree)}`;
+      const accessible = `String ${entry.string.number}, fret ${entry.fret}, ${data.pitchClassNames[entry.pc]}, ${degreeDescription}${entry.insideFocus ? ", inside the selected contour" : ""}${entry.isRoot ? ", tonic" : ""}${entry.isCharacteristic ? ", characteristic tone" : ""}${entry.isModalTonicChord ? `, part of the ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} modal tonic triad` : ""}${entry.isCagedChord ? `, part of the ${focusFamily.cagedForm}-form parent-major chord reference shape` : ""}`;
+      return `<g class="${classes}" data-overview-note="true"${entry.insideFocus ? ' data-inside-focus="true"' : ""}${entry.isRoot ? ' data-overview-root="true"' : ""}${entry.isCharacteristic ? ' data-overview-characteristic="true"' : ""}${entry.isModalTonicChord ? ' data-overview-modal-tonic-chord="true"' : ""}${entry.isCagedChord ? ` data-overview-caged-chord="true" data-overview-caged-degree="${entry.cagedDegree}"` : ""} transform="translate(${x} ${y})">`
         + `<title>${esc(accessible)}</title>`
         + (entry.isRoot ? `<circle class="overview-root-ring" style="stroke:${focusMode.accent}" r="18"/>` : "")
         + `<circle class="overview-disc" r="12"/>`
-        + `<text class="overview-degree" x="0" y="1">${esc(prettyDegree(entry.tone.degree))}</text>`
+        + `<text class="overview-degree" x="0" y="1">${esc(entry.cagedDegree || prettyDegree(entry.tone.degree))}</text>`
         + "</g>";
     }).join("");
 
@@ -295,11 +307,11 @@
         : overviewOverlay === "triad"
           ? `${focusMode.name} intervals · roots ringed · ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} tonic triad · ${modalTonicFormula} use violet fills`
         : overviewOverlay === "caged"
-          ? `${focusMode.name} intervals · roots ringed · P${focusMode.position} · ${focusFamily.cagedForm}-form parent-major chord tones are teal`
+          ? `${focusMode.name} intervals on other notes · P${focusMode.position} ${focusFamily.cagedForm}-form ${data.parentScale.tonic} major chord = teal 1 · 3 · 5 · rings mark ${focusMode.tonic} tonic`
           : `${focusMode.name} intervals · roots ringed`
       : `Parent-major intervals · ${familySummary} · seven modal roots`;
     const overlayDescription = overviewOverlay === "caged"
-      ? ` The ${focusFamily.cagedForm}-form ${data.parentScale.tonic} major chord reference shape is highlighted, while interval labels remain relative to ${focusMode.tonic}.`
+      ? ` The ${focusFamily.cagedForm}-form ${data.parentScale.tonic} major chord reference shape is highlighted. Its teal notes use parent-major chord degrees 1, 3, and 5; all other interval labels remain relative to ${focusMode.tonic}.`
       : overviewOverlay === "triad"
         ? ` Every ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} tonic-triad target inside the selected contour is highlighted. This is a chord-tone map, not a single chord voicing.`
         : "";
