@@ -26,7 +26,7 @@
         <div class="overview-heading">
           <div class="overview-copy">
             <h2 id="overview-heading">Connected positions</h2>
-            <p>One shared major-scale fretboard: five overlapping CAGED-derived regions and seven possible modal roots. Focus a mode to compare its identity tones with the parent-major chord tones in that region.</p>
+            <p>One shared major-scale fretboard: five overlapping CAGED-derived regions and seven possible modal roots. Focus a mode to compare its characteristic tones, modal tonic-chord targets, or the parent-major CAGED voicing.</p>
           </div>
           <div class="overview-controls">
             <label class="select-control" for="overview-focus">
@@ -39,6 +39,7 @@
               Position overlay
               <select id="overview-overlay">
                 <option value="characteristic" selected>Modal characteristic tones</option>
+                <option value="triad">Modal tonic chord tones</option>
                 <option value="caged">Parent-major CAGED chord tones</option>
                 <option value="none">None</option>
               </select>
@@ -141,6 +142,7 @@
               <p>Moving upward through the current fret range, the parent-major chord forms are:</p>
               <ol id="caged-reference" class="caged-strip" aria-label="Position family to CAGED form mapping"></ol>
               <p>In the connected overview, choose <strong>Parent-major CAGED chord tones</strong> to highlight the reference voicing inside the focused region. These tones belong to the parent-major I chord, not necessarily the focused mode's tonic chord.</p>
+              <p>Choose <strong>Modal tonic chord tones</strong> to highlight every tonic-triad target inside the focused contour. In A Dorian this means A–C–E (<code>1 ♭3 5</code>), not the G–B–D parent-major D-form. It is a chord-tone map across the box, not one specific guitar voicing.</p>
               <p class="fine-print">P1–P5 are local labels for this project. Pentatonic “box numbers” may differ in another book.</p>
             </section>
 

@@ -105,7 +105,7 @@
     if (!["full", "combined", "pentatonic"].includes(candidate.settings.view)
       || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
       || !overviewFocuses.has(candidate.settings.overviewFocus)
-      || !["none", "characteristic", "caged"].includes(candidate.settings.overviewOverlay)) {
+      || !["none", "characteristic", "triad", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
     }
     if (!Array.isArray(candidate.data.strings) || candidate.data.strings.length !== 6) {

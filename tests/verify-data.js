@@ -178,7 +178,16 @@ const expectedOverviewNotes = data.strings.reduce((total, string) => {
 }, 0);
 
 const overviewFocuses = ["all", ...data.modes.map((mode) => mode.id)];
-const overviewOverlays = ["none", "characteristic", "caged"];
+const overviewOverlays = ["none", "characteristic", "triad", "caged"];
+const expectedModalTonicCounts = new Map([
+  ["g-ionian", 7],
+  ["a-dorian", 8],
+  ["b-phrygian", 8],
+  ["c-lydian", 7],
+  ["d-mixolydian", 7],
+  ["e-aeolian", 8],
+  ["fs-locrian", 8]
+]);
 for (const focusMode of overviewFocuses) {
   for (const overlay of overviewOverlays) {
     const overview = renderer.renderOverviewSvg(data, { focusMode, overlay });
@@ -204,6 +213,7 @@ for (const focusMode of overviewFocuses) {
       assert(!overview.includes("data-active-contour="), "All-position overview must use only the five family contours");
       assert.equal(occurrences(overview, 'data-overview-root="true"'), 0, "All-position overview uses the seven labeled anchor rings rather than one modal root");
       assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), 0, "All-position overview must not imply one mode's characteristic tones");
+      assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), 0, "All-position overview must not imply one mode's tonic chord");
       assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), 0, "All-position overview must not imply a single CAGED voicing");
     } else {
       assert(overview.includes(`data-active-contour="${selectedMode.id}"`), `${selectedMode.name} must draw its exact selected contour`);
@@ -219,6 +229,18 @@ for (const focusMode of overviewFocuses) {
           .filter((entry) => selectedMode.characteristicDegrees.includes(entry.tone.degree)).length
         : 0;
       assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), expectedCharacteristics, `${selectedMode.name} characteristic highlights must stay inside its contour`);
+      const modalTonicDegrees = new Set(renderer.overlayFor(selectedMode, "triad").degrees);
+      const expectedModalTonicNotes = overlay === "triad"
+        ? renderer.collectEntries(data, selectedMode, "full").flat()
+          .filter((entry) => modalTonicDegrees.has(entry.tone.degree)).length
+        : 0;
+      assert.equal(expectedModalTonicNotes, overlay === "triad" ? expectedModalTonicCounts.get(selectedMode.id) : 0, `${selectedMode.name} modal tonic triad must retain its audited target count`);
+      assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), expectedModalTonicNotes, `${selectedMode.name} modal tonic chord highlights must stay inside its contour`);
+      if (overlay === "triad") {
+        const modalTonicFormula = [...modalTonicDegrees].map(renderer.prettyDegree).join(" + ");
+        assert(overview.includes(`${selectedMode.tonic} ${selectedMode.tonicChord.triadQuality} tonic triad · ${modalTonicFormula} use violet fills`), `${selectedMode.name} modal tonic caption must show chord identity and formula`);
+        assert(overview.includes("not a single chord voicing"), `${selectedMode.name} modal tonic description must distinguish a tone map from a grip`);
+      }
       const selectedFamily = data.positionFamilies.find((family) => family.position === selectedMode.position);
       const expectedCagedNotes = overlay === "caged"
         ? selectedFamily.chordFretsByString.reduce((total, frets) => total + frets.length, 0)
@@ -236,6 +258,7 @@ for (const focusMode of overviewFocuses) {
 }
 
 assert.equal(renderer.overviewFocusMode(data, "not-a-mode"), null);
+assert.equal(renderer.normalizeOverviewOverlay("triad"), "triad");
 assert.equal(renderer.normalizeOverviewOverlay("caged"), "caged");
 assert.equal(renderer.normalizeOverviewOverlay("not-an-overlay", false), "none");
 assert.equal(renderer.normalizeOverviewOverlay("not-an-overlay", true), "characteristic");
@@ -251,10 +274,11 @@ assert(indexHtml.includes('href="#map"'), "Primary navigation must link to the d
 assert(indexHtml.includes('href="#cheat-sheet"'), "Primary navigation must link to the theory cheat sheet");
 assert(indexHtml.includes('id="mode-reference-body"'), "The cheat sheet must include the data-driven seven-mode reference table");
 assert(indexHtml.includes('id="overview-overlay"'), "The connected overview must offer one compact position-overlay selector");
+assert(indexHtml.includes('<option value="triad">Modal tonic chord tones</option>'), "The position overlay must offer modal tonic chord tones");
 assert(indexHtml.includes('value="caged"'), "The position overlay must offer parent-major CAGED chord tones");
 assert(indexHtml.includes("CAGED is five overlapping fretboard regions"), "The cheat sheet must explain CAGED as a location framework");
 assert(indexHtml.includes("Every mode can be played in every usable CAGED region"), "The cheat sheet must prevent fixed mode-to-CAGED assignments");
 assert(appSource.includes('window.addEventListener("hashchange"'), "Page navigation must respond to browser Back and Forward");
 assert(appSource.includes("renderTheoryReference();"), "Theory reference rows must update with imported project data");
 
-console.log("Verified the connected CAGED overview, seven modal boxes, and two-view theory reference.");
+console.log("Verified the connected CAGED/modal-tonic overview, seven modal boxes, and two-view theory reference.");
