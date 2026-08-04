@@ -262,11 +262,15 @@
         const y = yForString(stringIndex);
         const labelY = index % 2 === 0 ? 347 : 385;
         const state = !focusMode ? "all" : focusMode.id === mode.id ? "active" : "context";
+        const anchorFamily = positionFamilyFor(data, mode.position);
+        const cagedFormLabel = overviewOverlay === "caged" && anchorFamily
+          ? ` · ${anchorFamily.cagedForm}-form`
+          : "";
         return `<g class="overview-mode-anchor ${state}" data-mode-anchor="${mode.id}">`
           + `<title>${esc(mode.name)} begins on string ${mode.anchor.string}, fret ${mode.anchor.fret}</title>`
           + `<circle class="overview-anchor-ring" style="stroke:${mode.accent}" cx="${x}" cy="${y}" r="18"/>`
           + `<line class="overview-anchor-leader" style="stroke:${mode.accent}" x1="${x}" y1="${y + 20}" x2="${x}" y2="${labelY - 16}"/>`
-          + `<text class="overview-anchor-label" style="fill:${mode.accent}" x="${x}" y="${labelY}">P${mode.position} · ${esc(mode.name)}</text>`
+          + `<text class="overview-anchor-label" style="fill:${mode.accent}" x="${x}" y="${labelY}">P${mode.position} · ${esc(mode.name)}${esc(cagedFormLabel)}</text>`
           + "</g>";
       }).join("");
 
@@ -281,7 +285,7 @@
       ? overviewOverlay === "characteristic"
         ? `${focusMode.name} intervals · roots ringed · characteristic ${characteristicDegrees} use amber edges`
         : overviewOverlay === "caged"
-          ? `${focusMode.name} intervals · roots ringed · P${focusMode.position} ${focusFamily.cagedForm}-form parent-major chord tones are teal`
+          ? `${focusMode.name} intervals · roots ringed · P${focusMode.position} · ${focusFamily.cagedForm}-form parent-major chord tones are teal`
           : `${focusMode.name} intervals · roots ringed`
       : `Parent-major intervals · ${familySummary} · seven modal roots`;
     const description = focusMode

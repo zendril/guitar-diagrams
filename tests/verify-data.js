@@ -224,6 +224,13 @@ for (const focusMode of overviewFocuses) {
         ? selectedFamily.chordFretsByString.reduce((total, frets) => total + frets.length, 0)
         : 0;
       assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), expectedCagedNotes, `${selectedMode.name} must highlight exactly one parent-major ${selectedFamily.cagedForm}-form voicing`);
+      for (const mode of data.modes) {
+        const family = data.positionFamilies.find((candidate) => candidate.position === mode.position);
+        const expectedAnchorLabel = overlay === "caged"
+          ? `P${mode.position} · ${mode.name} · ${family.cagedForm}-form`
+          : `P${mode.position} · ${mode.name}</text>`;
+        assert(overview.includes(expectedAnchorLabel), `${mode.name} anchor must ${overlay === "caged" ? "show" : "omit"} its CAGED form in the ${overlay} view`);
+      }
     }
   }
 }
