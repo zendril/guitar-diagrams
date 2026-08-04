@@ -12,6 +12,7 @@ The editor provides:
 
 - a connected-position overview with five overlapping physical contours and all seven modal root anchors;
 - a mode-focus control that relabels the shared fretboard from the selected tonic and emphasizes its exact contour, roots, and characteristic tones;
+- a focused-position overlay that switches between modal characteristic tones and parent-major CAGED chord tones;
 - one separate diagram for each mode;
 - a full-scale view with all seven notes shown equally;
 - a full-scale view with the pentatonic core emphasized;
@@ -60,3 +61,5 @@ The overview intentionally shows five broad position families rather than preten
 CAGED and modes describe different dimensions. CAGED is a physical, chord-based map of five overlapping neck regions; a mode is an interval formula heard relative to a tonic. A CAGED letter names the movable parent-chord form inside a region, not a mode, key, or required starting note. Every mode can be played through every usable CAGED region.
 
 For this map, moving upward through the displayed fret range gives position family 1 through 5 as `E-form → D-form → C-form → A-form → G-form`. These are CAGED-aligned parent-major regions, not universal scale-box definitions. Five common pentatonic shapes often align with those regions, but box numbering varies between teaching systems.
+
+The connected overview can highlight one parent-major reference voicing for the focused family: E-form `3–5–5–4–3–3`, D-form `x–x–5–7–8–7`, C-form `x–10–9–7–8–7`, A-form `x–10–12–12–12–10`, and G-form `15–14–12–12–12–15` (written low string to high string, with `x` for a muted string). The complete G- and C-form grips are often played as smaller fragments; the diagram shows their full chord-tone skeleton. Interval labels remain relative to the selected mode, so the overlay does not imply that the parent-major chord is every mode's tonic chord.

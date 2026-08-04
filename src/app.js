@@ -5,7 +5,7 @@
   const renderer = window.GuitarDiagramRenderer;
   const overviewFrame = document.getElementById("overview-frame");
   const overviewFocusControl = document.getElementById("overview-focus");
-  const overviewCharacteristicControl = document.getElementById("overview-characteristic");
+  const overviewOverlayControl = document.getElementById("overview-overlay");
   const diagramsRoot = document.getElementById("diagrams");
   const legendRoot = document.getElementById("legend");
   const status = document.getElementById("status");
@@ -23,7 +23,7 @@
       view: "combined",
       overlay: "none",
       overviewFocus: "all",
-      overviewCharacteristic: true
+      overviewOverlay: "characteristic"
     },
     data: structuredClone(defaultData)
   };
@@ -65,8 +65,11 @@
     if (normalized && normalized.settings && normalized.settings.overviewFocus === undefined) {
       normalized.settings.overviewFocus = "all";
     }
-    if (normalized && normalized.settings && normalized.settings.overviewCharacteristic === undefined) {
-      normalized.settings.overviewCharacteristic = true;
+    if (normalized && normalized.settings && normalized.settings.overviewOverlay === undefined) {
+      normalized.settings.overviewOverlay = normalized.settings.overviewCharacteristic === false ? "none" : "characteristic";
+    }
+    if (normalized && normalized.settings) {
+      delete normalized.settings.overviewCharacteristic;
     }
     if (normalized && normalized.data && Array.isArray(normalized.data.modes)) {
       for (const mode of normalized.data.modes) {
@@ -80,6 +83,13 @@
     }
     if (normalized && normalized.data && !Array.isArray(normalized.data.positionFamilies)) {
       normalized.data.positionFamilies = structuredClone(defaultData.positionFamilies);
+    } else if (normalized && normalized.data && Array.isArray(normalized.data.positionFamilies)) {
+      for (const family of normalized.data.positionFamilies) {
+        const matchingDefault = defaultData.positionFamilies.find((candidateFamily) => candidateFamily.position === family.position);
+        if (matchingDefault && !Array.isArray(family.chordFretsByString)) {
+          family.chordFretsByString = structuredClone(matchingDefault.chordFretsByString);
+        }
+      }
     }
     return normalized;
   }
@@ -95,7 +105,7 @@
     if (!["full", "combined", "pentatonic"].includes(candidate.settings.view)
       || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
       || !overviewFocuses.has(candidate.settings.overviewFocus)
-      || typeof candidate.settings.overviewCharacteristic !== "boolean") {
+      || !["none", "characteristic", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
     }
     if (!Array.isArray(candidate.data.strings) || candidate.data.strings.length !== 6) {
@@ -114,7 +124,11 @@
     for (const family of candidate.data.positionFamilies) {
       if (!family || !Number.isInteger(family.position) || family.position < 1
         || familyPositions.has(family.position) || !/^[CAGED]$/.test(family.cagedForm)
-        || cagedForms.has(family.cagedForm)) {
+        || cagedForms.has(family.cagedForm)
+        || !Array.isArray(family.chordFretsByString) || family.chordFretsByString.length !== 6
+        || family.chordFretsByString.flat().length < 4
+        || family.chordFretsByString.some((frets) => !Array.isArray(frets) || frets.length > 1
+          || frets.some((fret) => !Number.isInteger(fret) || fret < 0 || fret > 30))) {
         throw new Error("Every position family needs a unique position and CAGED form.");
       }
       familyPositions.add(family.position);
@@ -127,6 +141,21 @@
         || !Number.isInteger(string.openPitchClass) || string.openPitchClass < 0 || string.openPitchClass > 11
         || typeof string.name !== "string" || string.name.length > 8) {
         throw new Error(`String definition ${stringIndex + 1} is invalid.`);
+      }
+    }
+    const parentChordPitchClasses = new Set([
+      candidate.data.parentScale.pitchClasses[0],
+      candidate.data.parentScale.pitchClasses[2],
+      candidate.data.parentScale.pitchClasses[4]
+    ]);
+    for (const family of candidate.data.positionFamilies) {
+      for (const [stringIndex, frets] of family.chordFretsByString.entries()) {
+        for (const fret of frets) {
+          const pc = (candidate.data.strings[stringIndex].openPitchClass + fret) % 12;
+          if (!parentChordPitchClasses.has(pc)) {
+            throw new Error(`Position ${family.position} contains a note outside the parent-major CAGED chord.`);
+          }
+        }
       }
     }
     for (const mode of candidate.data.modes) {
@@ -175,12 +204,20 @@
       || [...modePositions].some((position) => !familyPositions.has(position))) {
       throw new Error("Every modal contour must belong to one of the five CAGED position families.");
     }
+    for (const family of candidate.data.positionFamilies) {
+      const familyModes = candidate.data.modes.filter((mode) => mode.position === family.position);
+      for (const [stringIndex, frets] of family.chordFretsByString.entries()) {
+        if (frets.some((fret) => familyModes.some((mode) => !mode.fretsByString[stringIndex].includes(fret)))) {
+          throw new Error(`Position ${family.position} CAGED chord tones must stay inside every contour in that family.`);
+        }
+      }
+    }
   }
 
   function preflightProject(candidate) {
     renderer.renderOverviewSvg(candidate.data, {
       focusMode: candidate.settings.overviewFocus,
-      showCharacteristic: candidate.settings.overviewCharacteristic
+      overlay: candidate.settings.overviewOverlay
     });
     for (const mode of candidate.data.modes) {
       renderer.renderModeSvg(candidate.data, mode, candidate.settings);
@@ -206,8 +243,8 @@
     document.querySelector(`input[name="view"][value="${project.settings.view}"]`).checked = true;
     overlayControl.value = project.settings.overlay;
     overviewFocusControl.value = project.settings.overviewFocus;
-    overviewCharacteristicControl.checked = project.settings.overviewCharacteristic;
-    overviewCharacteristicControl.disabled = project.settings.overviewFocus === "all";
+    overviewOverlayControl.value = project.settings.overviewOverlay;
+    overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
   }
 
   function renderLegend() {
@@ -247,10 +284,10 @@
   }
 
   function renderOverview() {
-    overviewCharacteristicControl.disabled = project.settings.overviewFocus === "all";
+    overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
     overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, {
       focusMode: project.settings.overviewFocus,
-      showCharacteristic: project.settings.overviewCharacteristic
+      overlay: project.settings.overviewOverlay
     });
   }
 
@@ -318,7 +355,7 @@
   function exportOverview() {
     const markup = renderer.renderOverviewSvg(project.data, {
       focusMode: project.settings.overviewFocus,
-      showCharacteristic: project.settings.overviewCharacteristic
+      overlay: project.settings.overviewOverlay
     });
     const filename = `${renderer.overviewFileStem(project.data, project.settings.overviewFocus)}.svg`;
     downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);
@@ -372,8 +409,8 @@
     renderOverview();
   });
 
-  overviewCharacteristicControl.addEventListener("change", (event) => {
-    project.settings.overviewCharacteristic = event.target.checked;
+  overviewOverlayControl.addEventListener("change", (event) => {
+    project.settings.overviewOverlay = event.target.value;
     saveProject();
     renderOverview();
   });

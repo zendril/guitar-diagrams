@@ -26,7 +26,7 @@
         <div class="overview-heading">
           <div class="overview-copy">
             <h2 id="overview-heading">Connected positions</h2>
-            <p>One shared major-scale fretboard: five overlapping CAGED-derived regions and seven possible modal roots. A position family is not permanently tied to a mode.</p>
+            <p>One shared major-scale fretboard: five overlapping CAGED-derived regions and seven possible modal roots. Focus a mode to compare its identity tones with the parent-major chord tones in that region.</p>
           </div>
           <div class="overview-controls">
             <label class="select-control" for="overview-focus">
@@ -35,9 +35,13 @@
                 <option value="all">All positions</option>
               </select>
             </label>
-            <label class="check-control" for="overview-characteristic">
-              <input id="overview-characteristic" type="checkbox" checked>
-              Highlight characteristic tones
+            <label class="select-control" for="overview-overlay">
+              Position overlay
+              <select id="overview-overlay">
+                <option value="characteristic" selected>Modal characteristic tones</option>
+                <option value="caged">Parent-major CAGED chord tones</option>
+                <option value="none">None</option>
+              </select>
             </label>
             <button type="button" id="export-overview">Export overview SVG</button>
             <button type="button" id="print-overview">Print overview</button>
@@ -136,6 +140,7 @@
               <h2 id="current-map-heading">CAGED forms on this map</h2>
               <p>Moving upward through the current fret range, the parent-major chord forms are:</p>
               <ol id="caged-reference" class="caged-strip" aria-label="Position family to CAGED form mapping"></ol>
+              <p>In the connected overview, choose <strong>Parent-major CAGED chord tones</strong> to highlight the reference voicing inside the focused region. These tones belong to the parent-major I chord, not necessarily the focused mode's tonic chord.</p>
               <p class="fine-print">P1–P5 are local labels for this project. Pentatonic “box numbers” may differ in another book.</p>
             </section>
 

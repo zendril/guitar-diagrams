@@ -110,6 +110,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 
 .toolbar fieldset { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 0; padding: 0; border: 0; }
 .toolbar legend, .select-control { font-size: 0.86rem; font-weight: 700; }
+.select-control:has(select:disabled) { color: var(--muted); }
 .toolbar fieldset label { display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.92rem; }
 .select-control { display: grid; gap: 0.35rem; }
 select { min-height: 2.35rem; padding: 0.35rem 2rem 0.35rem 0.55rem; border: 1px solid #bcc3ce; border-radius: 0.45rem; background: #fff; color: var(--ink); }

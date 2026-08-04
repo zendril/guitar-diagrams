@@ -11,7 +11,7 @@ const overlays = ["none", "characteristic", "triad", "seventh"];
 const occurrences = (markup, needle) => (markup.match(new RegExp(needle, "g")) || []).length;
 
 assert.equal(data.schemaVersion, 1);
-assert.equal(data.sourceRevision, 3);
+assert.equal(data.sourceRevision, 4);
 assert.equal(data.modes.length, 7);
 assert.equal(data.strings.length, 6);
 assert.deepEqual(
@@ -19,6 +19,32 @@ assert.deepEqual(
   [[1, "E"], [2, "D"], [3, "C"], [4, "A"], [5, "G"]],
   "The current fret range must move through the audited E-D-C-A-G parent-major forms"
 );
+assert.deepEqual(
+  data.positionFamilies.map((family) => family.chordFretsByString),
+  [
+    [[3], [3], [4], [5], [5], [3]],
+    [[7], [8], [7], [5], [], []],
+    [[7], [8], [7], [9], [10], []],
+    [[10], [12], [12], [12], [10], []],
+    [[15], [12], [12], [12], [14], [15]]
+  ],
+  "Position families must retain the audited high-e-to-low-E parent-major CAGED voicings"
+);
+const parentChordPitchClasses = new Set([
+  data.parentScale.pitchClasses[0],
+  data.parentScale.pitchClasses[2],
+  data.parentScale.pitchClasses[4]
+]);
+for (const family of data.positionFamilies) {
+  const familyModes = data.modes.filter((mode) => mode.position === family.position);
+  for (const [stringIndex, frets] of family.chordFretsByString.entries()) {
+    for (const fret of frets) {
+      const pc = (data.strings[stringIndex].openPitchClass + fret) % 12;
+      assert(parentChordPitchClasses.has(pc), `P${family.position} ${family.cagedForm}-form must contain only parent-major chord tones`);
+      assert(familyModes.every((mode) => mode.fretsByString[stringIndex].includes(fret)), `P${family.position} chord fret must stay inside every contour assigned to its family`);
+    }
+  }
+}
 
 const markerGeometry = renderer.modeMarkerGeometry;
 const widestDiscRadius = markerGeometry.radius
@@ -152,14 +178,17 @@ const expectedOverviewNotes = data.strings.reduce((total, string) => {
 }, 0);
 
 const overviewFocuses = ["all", ...data.modes.map((mode) => mode.id)];
+const overviewOverlays = ["none", "characteristic", "caged"];
 for (const focusMode of overviewFocuses) {
-  for (const showCharacteristic of [false, true]) {
-    const overview = renderer.renderOverviewSvg(data, { focusMode, showCharacteristic });
+  for (const overlay of overviewOverlays) {
+    const overview = renderer.renderOverviewSvg(data, { focusMode, overlay });
     const selectedMode = data.modes.find((mode) => mode.id === focusMode);
+    const effectiveOverlay = selectedMode ? overlay : "none";
     assert(overview.startsWith("<svg"), `${focusMode} overview must be SVG`);
     assert(!overview.includes("undefined"), `${focusMode} overview contains undefined`);
     assert(!overview.includes("NaN"), `${focusMode} overview contains NaN`);
     assert(overview.includes(`data-focus="${focusMode}"`), `${focusMode} overview must expose its focus`);
+    assert(overview.includes(`data-overlay="${effectiveOverlay}"`), `${focusMode} overview must expose its effective position overlay`);
     assert(overview.includes(`data-fret-min="${overviewMinFret}" data-fret-max="${overviewMaxFret}"`), "Overview must expose its complete fret range");
     assert.equal(occurrences(overview, 'data-position-family="'), 5, "Overview must contain five physical position-family contours");
     assert.equal(occurrences(overview, 'data-caged-form="'), 5, "Every position family must identify its underlying CAGED form");
@@ -175,6 +204,7 @@ for (const focusMode of overviewFocuses) {
       assert(!overview.includes("data-active-contour="), "All-position overview must use only the five family contours");
       assert.equal(occurrences(overview, 'data-overview-root="true"'), 0, "All-position overview uses the seven labeled anchor rings rather than one modal root");
       assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), 0, "All-position overview must not imply one mode's characteristic tones");
+      assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), 0, "All-position overview must not imply a single CAGED voicing");
     } else {
       assert(overview.includes(`data-active-contour="${selectedMode.id}"`), `${selectedMode.name} must draw its exact selected contour`);
       let expectedRoots = 0;
@@ -184,16 +214,24 @@ for (const focusMode of overviewFocuses) {
         }
       }
       assert.equal(occurrences(overview, 'data-overview-root="true"'), expectedRoots, `${selectedMode.name} must ring every visible tonic`);
-      const expectedCharacteristics = showCharacteristic
+      const expectedCharacteristics = overlay === "characteristic"
         ? renderer.collectEntries(data, selectedMode, "full").flat()
           .filter((entry) => selectedMode.characteristicDegrees.includes(entry.tone.degree)).length
         : 0;
       assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), expectedCharacteristics, `${selectedMode.name} characteristic highlights must stay inside its contour`);
+      const selectedFamily = data.positionFamilies.find((family) => family.position === selectedMode.position);
+      const expectedCagedNotes = overlay === "caged"
+        ? selectedFamily.chordFretsByString.reduce((total, frets) => total + frets.length, 0)
+        : 0;
+      assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), expectedCagedNotes, `${selectedMode.name} must highlight exactly one parent-major ${selectedFamily.cagedForm}-form voicing`);
     }
   }
 }
 
 assert.equal(renderer.overviewFocusMode(data, "not-a-mode"), null);
+assert.equal(renderer.normalizeOverviewOverlay("caged"), "caged");
+assert.equal(renderer.normalizeOverviewOverlay("not-an-overlay", false), "none");
+assert.equal(renderer.normalizeOverviewOverlay("not-an-overlay", true), "characteristic");
 assert.equal(renderer.overviewFileStem(data, "all"), "relative-mode-box-overview");
 assert.equal(renderer.overviewFileStem(data, "c-lydian"), "c-lydian-connected-box-overview");
 
@@ -205,6 +243,8 @@ assert.equal(occurrences(indexHtml, 'data-page-view="'), 2, "The single HTML fil
 assert(indexHtml.includes('href="#map"'), "Primary navigation must link to the diagrams page");
 assert(indexHtml.includes('href="#cheat-sheet"'), "Primary navigation must link to the theory cheat sheet");
 assert(indexHtml.includes('id="mode-reference-body"'), "The cheat sheet must include the data-driven seven-mode reference table");
+assert(indexHtml.includes('id="overview-overlay"'), "The connected overview must offer one compact position-overlay selector");
+assert(indexHtml.includes('value="caged"'), "The position overlay must offer parent-major CAGED chord tones");
 assert(indexHtml.includes("CAGED is five overlapping fretboard regions"), "The cheat sheet must explain CAGED as a location framework");
 assert(indexHtml.includes("Every mode can be played in every usable CAGED region"), "The cheat sheet must prevent fixed mode-to-CAGED assignments");
 assert(appSource.includes('window.addEventListener("hashchange"'), "Page navigation must respond to browser Back and Forward");

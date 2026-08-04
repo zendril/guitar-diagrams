@@ -9,7 +9,7 @@
 
   return {
     schemaVersion: 1,
-    sourceRevision: 3,
+    sourceRevision: 4,
     title: "Relative modes of the major scale",
     parentScale: {
       tonic: "G",
@@ -39,11 +39,11 @@
       11: "B"
     },
     positionFamilies: [
-      { position: 1, cagedForm: "E" },
-      { position: 2, cagedForm: "D" },
-      { position: 3, cagedForm: "C" },
-      { position: 4, cagedForm: "A" },
-      { position: 5, cagedForm: "G" }
+      { position: 1, cagedForm: "E", chordFretsByString: [[3], [3], [4], [5], [5], [3]] },
+      { position: 2, cagedForm: "D", chordFretsByString: [[7], [8], [7], [5], [], []] },
+      { position: 3, cagedForm: "C", chordFretsByString: [[7], [8], [7], [9], [10], []] },
+      { position: 4, cagedForm: "A", chordFretsByString: [[10], [12], [12], [12], [10], []] },
+      { position: 5, cagedForm: "G", chordFretsByString: [[15], [12], [12], [12], [14], [15]] }
     ],
     modes: [
       {
