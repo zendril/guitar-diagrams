@@ -20,6 +20,13 @@ assert.deepEqual(
   "The current fret range must move through the audited E-D-C-A-G parent-major forms"
 );
 
+const markerGeometry = renderer.modeMarkerGeometry;
+const widestDiscRadius = markerGeometry.radius
+  + Math.max(markerGeometry.discStrokeWidth, markerGeometry.overlayStrokeWidth) / 2;
+const tonicOuterRadius = markerGeometry.tonicRadius + markerGeometry.tonicStrokeWidth / 2;
+assert(2 * widestDiscRadius < markerGeometry.stringSpacing, "Highlighted note discs must leave clearance between adjacent strings");
+assert(2 * tonicOuterRadius <= markerGeometry.stringSpacing, "Tonic rings must not cross an adjacent string");
+
 for (const mode of data.modes) {
   assert.equal(mode.tones.length, 7, `${mode.name} must contain seven modal tones`);
   assert.equal(mode.tones.filter((tone) => tone.core).length, 5, `${mode.name} must contain five pentatonic-core tones`);

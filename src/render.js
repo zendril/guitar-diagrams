@@ -8,6 +8,15 @@
   const WIDTH = 960;
   const HEIGHT = 390;
   const PLOT = { left: 108, right: 918, top: 138, bottom: 286 };
+  const MODE_MARKER_GEOMETRY = Object.freeze({
+    radius: 12,
+    discStrokeWidth: 1.8,
+    tonicRadius: 14,
+    tonicStrokeWidth: 1.6,
+    overlayStrokeWidth: 4,
+    labelSize: 12,
+    stringSpacing: (286 - 138) / 5
+  });
   const OVERVIEW_WIDTH = 1440;
   const OVERVIEW_HEIGHT = 430;
   const OVERVIEW_PLOT = { left: 80, right: 1400, top: 125, bottom: 275 };
@@ -358,8 +367,8 @@
       const accessible = `String ${entry.string.number}, fret ${entry.fret}, ${entry.note}, degree ${prettyDegree(entry.tone.degree)}, ${entry.tone.core ? "part of the pentatonic core" : "outside the pentatonic core"}${entry.root ? ", tonic" : ""}${highlighted ? `, selected by the ${overlayInfo.accessible}` : ""}`;
       return `<g class="marker ${kind}${highlighted ? " overlay-highlight" : ""}${entry.root ? " tonic" : ""}"${highlighted ? ' data-highlighted="true"' : ""} transform="translate(${x} ${y})">`
         + `<title>${esc(accessible)}</title>`
-        + (entry.root ? `<circle class="tonic-ring" style="stroke:${mode.accent}" r="22"/>` : "")
-        + `<circle class="marker-disc" r="17"/>`
+        + (entry.root ? `<circle class="tonic-ring" style="stroke:${mode.accent}" r="${MODE_MARKER_GEOMETRY.tonicRadius}"/>` : "")
+        + `<circle class="marker-disc" r="${MODE_MARKER_GEOMETRY.radius}"/>`
         + markerLabel(entry)
         + "</g>";
     }).join("");
@@ -393,10 +402,10 @@
         .fret,.string{stroke:#6b7280;vector-effect:non-scaling-stroke}.fret{stroke-width:1px}.string{stroke-linecap:round}
         .fret-label,.string-label{font-size:13px;fill:#4b5563;text-anchor:middle;dominant-baseline:middle}
         .string-label{text-anchor:end}.position-outline{fill-opacity:.055;stroke-width:4;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-        .marker-disc{stroke:#111827;stroke-width:2;vector-effect:non-scaling-stroke}.core .marker-disc,.equal .marker-disc{fill:#111827}.optional .marker-disc{fill:#fff}
-        .marker-label{font-size:14px;font-weight:700;text-anchor:middle;dominant-baseline:middle;pointer-events:none}.core .marker-label,.equal .marker-label{fill:#fff}.optional .marker-label{fill:#111827}
-        .overlay-highlight .marker-disc{stroke:#b45309;stroke-width:5}
-        .tonic-ring{fill:none;stroke-width:3;vector-effect:non-scaling-stroke}
+        .marker-disc{stroke:#111827;stroke-width:${MODE_MARKER_GEOMETRY.discStrokeWidth};vector-effect:non-scaling-stroke}.core .marker-disc,.equal .marker-disc{fill:#111827}.optional .marker-disc{fill:#fff}
+        .marker-label{font-size:${MODE_MARKER_GEOMETRY.labelSize}px;font-weight:700;text-anchor:middle;dominant-baseline:middle;pointer-events:none}.core .marker-label,.equal .marker-label{fill:#fff}.optional .marker-label{fill:#111827}
+        .overlay-highlight .marker-disc{stroke:#b45309;stroke-width:${MODE_MARKER_GEOMETRY.overlayStrokeWidth}}
+        .tonic-ring{fill:none;stroke-width:${MODE_MARKER_GEOMETRY.tonicStrokeWidth};vector-effect:non-scaling-stroke}
         .legend-core,.legend-equal{fill:#111827;stroke:#111827;stroke-width:1.5}.legend-optional{fill:#fff;stroke:#111827;stroke-width:1.8}.legend-tonic{fill:none;stroke-width:2.5}.legend-overlay{fill:#111827;stroke:#b45309;stroke-width:4}
         .legend-text{font-size:13px;fill:#374151;dominant-baseline:middle}.overlay-caption{font-size:13px;font-weight:650;fill:#92400e}
       </style>`
@@ -435,6 +444,7 @@
     overviewFocusMode,
     overviewFileStem,
     normalizeView,
-    normalizeOverlay
+    normalizeOverlay,
+    modeMarkerGeometry: MODE_MARKER_GEOMETRY
   };
 }));
