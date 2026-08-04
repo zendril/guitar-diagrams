@@ -1,0 +1,9 @@
+{
+  "name": "guitar-diagrams",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test": "node tests/verify-data.js",
+    "export": "node scripts/export-svg.js"
+  }
+}

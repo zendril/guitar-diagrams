@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relative Modes of the Major Scale</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <nav class="page-nav" aria-label="Primary">
+    <a href="#map" data-page-link="map">Diagrams</a>
+    <a href="#cheat-sheet" data-page-link="cheat-sheet">Theory cheat sheet</a>
+  </nav>
+
+  <main>
+    <section id="map" class="page-view" data-page-view="map" aria-labelledby="diagram-page-title">
+      <header class="site-header diagram-page-header">
+        <div>
+          <p class="eyebrow">Editable guitar-learning diagrams</p>
+          <h1 id="diagram-page-title" data-page-heading tabindex="-1">Relative modes of the major scale</h1>
+          <p class="lede">Seven individual CAGED-derived positions, preserving the tonic-start contours from the marked reference.</p>
+        </div>
+      </header>
+
+      <section id="overview" class="overview-card print-card" aria-labelledby="overview-heading">
+        <div class="overview-heading">
+          <div class="overview-copy">
+            <h2 id="overview-heading">Connected positions</h2>
+            <p>One shared major-scale fretboard: five overlapping CAGED-derived regions and seven possible modal roots. A position family is not permanently tied to a mode.</p>
+          </div>
+          <div class="overview-controls">
+            <label class="select-control" for="overview-focus">
+              Focus mode
+              <select id="overview-focus">
+                <option value="all">All positions</option>
+              </select>
+            </label>
+            <label class="check-control" for="overview-characteristic">
+              <input id="overview-characteristic" type="checkbox" checked>
+              Highlight characteristic tones
+            </label>
+            <button type="button" id="export-overview">Export overview SVG</button>
+            <button type="button" id="print-overview">Print overview</button>
+          </div>
+        </div>
+        <div id="overview-frame" class="overview-frame"></div>
+      </section>
+
+      <section class="toolbar" aria-label="Diagram controls">
+        <fieldset>
+          <legend>Notes shown</legend>
+          <label><input type="radio" name="view" value="full"> Full scale — equal</label>
+          <label><input type="radio" name="view" value="combined" checked> Full scale — pentatonic emphasized</label>
+          <label><input type="radio" name="view" value="pentatonic"> Pentatonic only</label>
+        </fieldset>
+
+        <label class="select-control" for="overlay">
+          Learning highlight
+          <select id="overlay">
+            <option value="none">None</option>
+            <option value="characteristic">Characteristic tone(s)</option>
+            <option value="triad">Tonic triad</option>
+            <option value="seventh">Tonic seventh chord</option>
+          </select>
+        </label>
+
+        <div class="toolbar-actions">
+          <button type="button" id="download-project">Download project JSON</button>
+          <button type="button" id="import-project-button">Import project JSON</button>
+          <input id="import-project" type="file" accept="application/json,.json" hidden>
+          <button type="button" id="print-all" class="primary-action">Print all / save PDF</button>
+        </div>
+      </section>
+
+      <section id="legend" class="legend" aria-label="Marker legend"></section>
+
+      <div id="diagrams" class="diagram-list"></div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="cheat-sheet" class="page-view" data-page-view="cheat-sheet" aria-labelledby="cheat-sheet-title" hidden>
+      <header class="site-header cheat-header">
+        <div class="cheat-title-row">
+          <div>
+            <p class="eyebrow">Guitar theory reference</p>
+            <h1 id="cheat-sheet-title" data-page-heading tabindex="-1">Theory cheat sheet</h1>
+            <p class="lede">A mode is an interval formula heard from a tonic. A box is only a place to play it.</p>
+          </div>
+          <button type="button" id="print-cheat-sheet" class="primary-action no-print">Print cheat sheet</button>
+        </div>
+      </header>
+
+      <div class="cheat-sheet">
+        <article class="cheat-print-page" aria-labelledby="location-heading">
+          <section class="cheat-hero" aria-labelledby="location-heading">
+            <div>
+              <p class="cheat-side-label">Side A · Location and harmony</p>
+              <h2 id="location-heading">One fretboard, several different maps</h2>
+              <p><strong>CAGED tells you where.</strong> The tonic and interval formula tell you what mode you hear. Harmony and resolution make that tonic feel like home.</p>
+            </div>
+            <p class="memory-line"><strong>Remember:</strong> shape ≠ scale ≠ sound</p>
+          </section>
+
+          <ol class="concept-flow" aria-label="Build a modal position in layers">
+            <li><strong>CAGED form</strong><span>Locate a movable reference chord.</span></li>
+            <li><strong>Chord tones</strong><span>Anchor 1–3–5, then 7.</span></li>
+            <li><strong>Pentatonic core</strong><span>Add the safest five-note vocabulary.</span></li>
+            <li><strong>Modal color</strong><span>Add the two remaining scale tones.</span></li>
+            <li><strong>Next position</strong><span>Connect through the overlap.</span></li>
+          </ol>
+
+          <div class="cheat-grid">
+            <section class="cheat-block cheat-wide" aria-labelledby="caged-heading">
+              <h2 id="caged-heading">How CAGED fits</h2>
+              <p>CAGED is five overlapping fretboard regions derived from movable <strong>C, A, G, E, and D chord forms</strong>. Each form gives you roots, thirds, and fifths for the chord you choose to map. Add scale notes around that chord skeleton.</p>
+              <p>A CAGED letter names the underlying chord form—not the key, mode, or first note. Every mode can be played in every usable CAGED region.</p>
+              <p>In the connected overview, P1–P5 are named for the <strong>parent-major chord form</strong>. Modal roots and tonic chords are a separate layer inside those same physical regions.</p>
+
+              <div class="table-wrap">
+                <table class="cheat-table system-table">
+                  <caption>Three systems that answer different questions</caption>
+                  <thead>
+                    <tr><th scope="col">System</th><th scope="col">Count</th><th scope="col">What it organizes</th><th scope="col">Question it answers</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><th scope="row">CAGED</th><td>5</td><td>Chord-based neck regions</td><td>Where are the chord tones and nearby scale notes?</td></tr>
+                    <tr><th scope="row">Modes</th><td>7</td><td>Intervals heard from a tonic</td><td>What tonal color do these notes create?</td></tr>
+                    <tr><th scope="row">3NPS</th><td>7 common patterns</td><td>Three-notes-per-string fingerings</td><td>How can I organize linear scale movement?</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="note-callout"><strong>5 ≠ 7 ≠ 7.</strong> These counts come from different ideas. A mode is not a CAGED shape, and a numbered box is not universal across teaching systems.</p>
+            </section>
+
+            <section class="cheat-block" aria-labelledby="current-map-heading">
+              <h2 id="current-map-heading">CAGED forms on this map</h2>
+              <p>Moving upward through the current fret range, the parent-major chord forms are:</p>
+              <ol id="caged-reference" class="caged-strip" aria-label="Position family to CAGED form mapping"></ol>
+              <p class="fine-print">P1–P5 are local labels for this project. Pentatonic “box numbers” may differ in another book.</p>
+            </section>
+
+            <section class="cheat-block" aria-labelledby="tonic-chord-heading">
+              <h2 id="tonic-chord-heading">Tonic chord landmarks</h2>
+              <p>A tonic triad stacks every other scale degree from home: <code>1–3–5</code>. Add the next alternate degree for <code>1–3–5–7</code>.</p>
+              <ul class="compact-list">
+                <li>Major: <code>1 3 5</code></li>
+                <li>Minor: <code>1 ♭3 5</code></li>
+                <li>Diminished: <code>1 ♭3 ♭5</code></li>
+              </ul>
+              <p class="fine-print">These chord tones are strong phrase targets and the skeleton that makes CAGED useful.</p>
+            </section>
+
+            <section class="cheat-block" aria-labelledby="relative-heading">
+              <h2 id="relative-heading">Relative vs. parallel modes</h2>
+              <dl class="definition-list">
+                <div><dt>Relative</dt><dd>Same seven notes; tonic changes. Best for seeing how this shared map contains all seven modes.</dd></div>
+                <div><dt>Parallel</dt><dd>Same tonic; interval formula changes. Best for hearing what makes each mode distinct.</dd></div>
+              </dl>
+              <p class="note-callout">Starting or ending on another note is not enough. Use a drone, bass, tonic chord, repeated emphasis, and resolution to establish the mode.</p>
+            </section>
+
+            <section class="cheat-block" aria-labelledby="fretboard-heading">
+              <h2 id="fretboard-heading">Fretboard facts</h2>
+              <ul class="compact-list">
+                <li>Standard tuning, low to high: <code>E A D G B E</code>.</li>
+                <li>Strings move by fourths except <code>G → B</code>, which causes the familiar shape shift.</li>
+                <li>The same notes and geometry repeat 12 frets higher.</li>
+                <li>CAGED regions overlap; they are not sealed boxes.</li>
+              </ul>
+            </section>
+          </div>
+        </article>
+
+        <article class="cheat-print-page" aria-labelledby="sound-heading">
+          <section class="cheat-hero" aria-labelledby="sound-heading">
+            <div>
+              <p class="cheat-side-label">Side B · Sound and practice</p>
+              <h2 id="sound-heading">Hear the tonic, then hear the color</h2>
+              <p>Interval labels are measured from the selected tonic. The identity cue is the color tone to compare directly against that tonic.</p>
+            </div>
+            <p class="interval-ruler" aria-label="One-octave interval ruler">1 · ♭2 · 2 · ♭3 · 3 · 4 · ♯4/♭5 · 5 · ♭6 · 6 · ♭7 · 7 · (1)</p>
+          </section>
+
+          <section class="cheat-block" aria-labelledby="mode-table-heading">
+            <h2 id="mode-table-heading">The seven modes</h2>
+            <div class="table-wrap">
+              <table class="cheat-table mode-table">
+                <caption>Mode formulas, tonic chords, identity cues, and pentatonic layers</caption>
+                <thead>
+                  <tr><th scope="col">Degree</th><th scope="col">Mode</th><th scope="col">Interval formula</th><th scope="col">Tonic chord</th><th scope="col">Identity cue</th><th scope="col">Build from</th></tr>
+                </thead>
+                <tbody id="mode-reference-body"></tbody>
+              </table>
+            </div>
+            <p class="fine-print">Ionian's natural 4 + 7 distinguish it from Lydian and Mixolydian. Locrian is defined most strongly by ♭5; ♭2 adds further color.</p>
+          </section>
+
+          <div class="cheat-grid sound-grid">
+            <section class="cheat-block" aria-labelledby="pentatonic-heading">
+              <h2 id="pentatonic-heading">Pentatonic cores</h2>
+              <dl class="definition-list core-definitions">
+                <div><dt>Major</dt><dd><code>1 2 3 5 6</code><br>Inside Ionian, Lydian, and Mixolydian.</dd></div>
+                <div><dt>Minor</dt><dd><code>1 ♭3 4 5 ♭7</code><br>Inside Dorian, Phrygian, and Aeolian.</dd></div>
+              </dl>
+              <p class="note-callout">Hollow notes are not wrong or disposable. They are outside the five-note core and often contain the mode's defining sound.</p>
+              <p class="fine-print">Locrian uses the project-defined subset <code>1 ♭3 4 ♭5 ♭7</code>; there is no single standard “Locrian pentatonic.”</p>
+            </section>
+
+            <section class="cheat-block" aria-labelledby="practice-heading">
+              <h2 id="practice-heading">Five-step practice loop</h2>
+              <ol class="practice-list">
+                <li><strong>Hear it.</strong> Sustain the tonic with a drone or simple modal vamp.</li>
+                <li><strong>Anchor it.</strong> Find every 1; play 1–3–5–7.</li>
+                <li><strong>Phrase it.</strong> Use the major or minor pentatonic core.</li>
+                <li><strong>Color it.</strong> Add the identity cue deliberately against the tonic.</li>
+                <li><strong>Connect it.</strong> Cross into one neighbor and resolve to 1 or a chord tone.</li>
+              </ol>
+            </section>
+
+            <section class="cheat-block cheat-wide" aria-labelledby="traps-heading">
+              <h2 id="traps-heading">Common traps</h2>
+              <dl class="trap-grid">
+                <div><dt>“This box is the mode.”</dt><dd>The box is a location; tonic and harmony create the mode.</dd></div>
+                <div><dt>“Begin on the root and it becomes modal.”</dt><dd>A first note alone does not establish tonal center.</dd></div>
+                <div><dt>“Move the same shape one fret for the next mode.”</dt><dd>That transposes the same mode; it does not change its interval formula.</dd></div>
+                <div><dt>“Pentatonic omissions are avoid notes.”</dt><dd>The omitted notes frequently carry the modal identity.</dd></div>
+                <div><dt>“Phrygian and Lydian need different regions.”</dt><dd>They can share nearly the same frets while assigning different roots and intervals.</dd></div>
+                <div><dt>“Seven modes require seven CAGED shapes.”</dt><dd>CAGED has five regions; modes and common 3NPS systems each use seven for different reasons.</dd></div>
+              </dl>
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="src/diagram-data.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
