@@ -12,7 +12,7 @@ The editor provides:
 
 - a connected-position overview with five overlapping physical contours and all seven modal root anchors;
 - a mode-focus control that relabels the shared fretboard from the selected tonic and carries its interval formula and pentatonic/full-scale note treatment into the connected map;
-- a focused-position learning highlight that switches among characteristic tones, modal tonic-triad and tonic-seventh targets, and parent-major CAGED chord tones;
+- a focused-position learning highlight that switches among an across-neck pentatonic-only map, characteristic tones, modal tonic-triad and tonic-seventh targets, and parent-major CAGED chord tones;
 - one separate diagram for each mode;
 - a full-scale view with all seven notes shown equally;
 - a full-scale view with the pentatonic core emphasized;
@@ -63,6 +63,8 @@ A tonic triad is built by taking every other note from the tonic: scale degrees 
 The overview intentionally shows five broad position families rather than pretending the seven modes occupy seven unrelated regions. Ionian/Locrian share position family 1, and Phrygian/Lydian share position family 3; choosing either mode reveals its exact low-E boundary while the other position families remain visible as context.
 
 When a mode is focused, the connected overview repeats the same compact teaching hints as its individual diagram: the mode formula, the active full/pentatonic note treatment, and the selected learning highlight's chord quality and interval formula. In pentatonic-only view, a selected overlay target outside the five-note core remains visible as a labeled reference rather than making the learning highlight disappear.
+
+The overview's **Pentatonic only — across neck** focus is broader than an individual box: it shows every occurrence of the selected five-note pitch-class set from fret 2 through fret 15 and hides the two non-core mode tones. The full-position contours remain as navigation guides, not pentatonic-box boundaries. Some relative modes intentionally produce the same physical dot map with different tonic rings and interval labels: Ionian/Aeolian, Dorian/Lydian, and Phrygian/Mixolydian. Locrian instead uses the project's explicitly nonstandard Locrian-compatible subset described above.
 
 ## How CAGED relates to the modal boxes
 

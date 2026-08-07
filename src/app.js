@@ -111,7 +111,7 @@
       || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
       || !["compact", "guitar", "wide"].includes(candidate.settings.fretSpacing)
       || !overviewFocuses.has(candidate.settings.overviewFocus)
-      || !["none", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)) {
+      || !["none", "pentatonic", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
     }
     if (!Array.isArray(candidate.data.strings) || candidate.data.strings.length !== 6) {
