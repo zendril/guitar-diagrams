@@ -209,7 +209,7 @@ const expectedOverviewNotes = data.strings.reduce((total, string) => {
 }, 0);
 
 const overviewFocuses = ["all", ...data.modes.map((mode) => mode.id)];
-const overviewOverlays = ["none", "characteristic", "triad", "caged"];
+const overviewOverlays = ["none", "characteristic", "triad", "seventh", "caged"];
 const expectedModalTonicCounts = new Map([
   ["g-ionian", 7],
   ["a-dorian", 8],
@@ -219,36 +219,74 @@ const expectedModalTonicCounts = new Map([
   ["e-aeolian", 8],
   ["fs-locrian", 8]
 ]);
+const expectedModalSeventhCounts = new Map([
+  ["g-ionian", 9],
+  ["a-dorian", 10],
+  ["b-phrygian", 10],
+  ["c-lydian", 9],
+  ["d-mixolydian", 9],
+  ["e-aeolian", 10],
+  ["fs-locrian", 10]
+]);
+const overviewEntryKey = (entry) => `${entry.stringIndex}:${entry.fret}`;
 for (const focusMode of overviewFocuses) {
-  for (const overlay of overviewOverlays) {
-    const overview = renderer.renderOverviewSvg(data, { focusMode, overlay });
-    const selectedMode = data.modes.find((mode) => mode.id === focusMode);
-    const effectiveOverlay = selectedMode ? overlay : "none";
-    assert(overview.startsWith("<svg"), `${focusMode} overview must be SVG`);
-    assert(!overview.includes("undefined"), `${focusMode} overview contains undefined`);
-    assert(!overview.includes("NaN"), `${focusMode} overview contains NaN`);
-    assert(overview.includes(`data-focus="${focusMode}"`), `${focusMode} overview must expose its focus`);
-    assert(overview.includes(`data-overlay="${effectiveOverlay}"`), `${focusMode} overview must expose its effective position overlay`);
-    assert(overview.includes(`data-fret-min="${overviewMinFret}" data-fret-max="${overviewMaxFret}"`), "Overview must expose its complete fret range");
-    assert.equal(occurrences(overview, 'data-position-family="'), 5, "Overview must contain five physical position-family contours");
-    assert.equal(occurrences(overview, 'data-caged-form="'), 5, "Every position family must identify its underlying CAGED form");
-    assert.equal(occurrences(overview, 'data-mode-anchor="'), 7, "Overview must label all seven modal anchors");
-    assert.equal(occurrences(overview, 'data-overview-note="true"'), expectedOverviewNotes, "Every physical parent-scale note must render exactly once");
-    assert(overview.includes("How the boxes connect"), "Overview must carry a visible purpose label");
-    for (const familyMode of data.modes.filter((mode, index, modes) => modes.findIndex((candidate) => candidate.position === mode.position) === index)) {
-      const expectedStroke = selectedMode ? "#9ca3af" : familyMode.accent;
-      assert(overview.includes(`style="stroke:${expectedStroke}"`), `${familyMode.name} position-family contour must embed a portable stroke color`);
-    }
+  for (const view of views) {
+    for (const overlay of overviewOverlays) {
+      const overview = renderer.renderOverviewSvg(data, { focusMode, overlay, view });
+      const selectedMode = data.modes.find((mode) => mode.id === focusMode);
+      const effectiveOverlay = selectedMode ? overlay : "none";
+      const effectiveView = selectedMode ? view : "full";
+      assert(overview.startsWith("<svg"), `${focusMode} ${view}/${overlay} overview must be SVG`);
+      assert(!overview.includes("undefined"), `${focusMode} ${view}/${overlay} overview contains undefined`);
+      assert(!overview.includes("NaN"), `${focusMode} ${view}/${overlay} overview contains NaN`);
+      assert(overview.includes(`data-focus="${focusMode}"`), `${focusMode} overview must expose its focus`);
+      assert(overview.includes(`data-overlay="${effectiveOverlay}" data-view="${effectiveView}"`), `${focusMode} overview must expose its effective overlay and note view`);
+      assert(overview.includes(`data-fret-min="${overviewMinFret}" data-fret-max="${overviewMaxFret}"`), "Overview must expose its complete fret range");
+      assert.equal(occurrences(overview, 'data-position-family="'), 5, "Overview must contain five physical position-family contours");
+      assert.equal(occurrences(overview, 'data-caged-form="'), 5, "Every position family must identify its underlying CAGED form");
+      assert.equal(occurrences(overview, 'data-mode-anchor="'), 7, "Overview must label all seven modal anchors");
+      assert.equal(occurrences(overview, 'data-overview-note="true"'), expectedOverviewNotes, "Every physical parent-scale note must render exactly once");
+      assert(overview.includes("How the boxes connect"), "Overview must carry a visible purpose label");
+      assert(overview.includes('viewBox="0 0 1440 460"'), "Overview must reserve three collision-free teaching rows");
+      for (const familyMode of data.modes.filter((mode, index, modes) => modes.findIndex((candidate) => candidate.position === mode.position) === index)) {
+        const expectedStroke = selectedMode ? "#9ca3af" : familyMode.accent;
+        assert(overview.includes(`style="stroke:${expectedStroke}"`), `${familyMode.name} position-family contour must embed a portable stroke color`);
+      }
 
-    if (!selectedMode) {
-      assert(!overview.includes("data-active-contour="), "All-position overview must use only the five family contours");
-      assert.equal(occurrences(overview, 'data-overview-root="true"'), 0, "All-position overview uses the seven labeled anchor rings rather than one modal root");
-      assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), 0, "All-position overview must not imply one mode's characteristic tones");
-      assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), 0, "All-position overview must not imply one mode's tonic chord");
-      assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), 0, "All-position overview must not imply a single CAGED voicing");
-      assert.equal(occurrences(overview, 'data-overview-caged-degree="'), 0, "All-position overview must not use chord-relative marker labels");
-    } else {
-      assert(overview.includes(`data-active-contour="${selectedMode.id}"`), `${selectedMode.name} must draw its exact selected contour`);
+      const formulaMode = selectedMode || data.modes.find((mode) => mode.name === "Ionian");
+      const expectedFormula = (effectiveView === "pentatonic" ? formulaMode.tones.filter((tone) => tone.core) : formulaMode.tones)
+        .map((tone) => renderer.prettyDegree(tone.degree)).join("  ");
+      assert(overview.includes(`class="overview-formula" x="1400" y="39">${expectedFormula}</text>`), `${focusMode} ${effectiveView} overview must show its matching interval formula`);
+
+      if (!selectedMode) {
+        assert(!overview.includes("data-active-contour="), "All-position overview must use only the five family contours");
+        assert.equal(occurrences(overview, 'data-overview-visible-in-view="true"'), 0, "All-position overview has no single active modal note view");
+        assert.equal(occurrences(overview, 'data-overview-root="true"'), 0, "All-position overview uses the seven labeled anchor rings rather than one modal root");
+        assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), 0, "All-position overview must not imply one mode's characteristic tones");
+        assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), 0, "All-position overview must not imply one mode's tonic chord");
+        assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), 0, "All-position overview must not imply a single CAGED voicing");
+        assert(overview.includes("Focus a mode to compare its learning highlights"), "All-position overview must explain why learning highlights are disabled");
+        continue;
+      }
+
+      assert(overview.includes(`data-active-contour="${selectedMode.id}"`), `${selectedMode.name} must draw its exact full-scale contour`);
+      assert(overview.includes(renderer.modeViewSummary(selectedMode, effectiveView)), `${selectedMode.name} must carry the individual diagram's note-view hint into the overview`);
+      const fullEntries = renderer.collectEntries(data, selectedMode, "full").flat();
+      const expectedVisibleKeys = new Set(renderer.collectEntries(data, selectedMode, effectiveView).flat().map(overviewEntryKey));
+      const selectedFamily = data.positionFamilies.find((family) => family.position === selectedMode.position);
+      if (effectiveView === "pentatonic") {
+        if (overlay === "characteristic") {
+          fullEntries.filter((entry) => selectedMode.characteristicDegrees.includes(entry.tone.degree)).forEach((entry) => expectedVisibleKeys.add(overviewEntryKey(entry)));
+        } else if (overlay === "triad" || overlay === "seventh") {
+          const degrees = new Set(renderer.overlayFor(selectedMode, overlay).degrees);
+          fullEntries.filter((entry) => degrees.has(entry.tone.degree)).forEach((entry) => expectedVisibleKeys.add(overviewEntryKey(entry)));
+        } else if (overlay === "caged") {
+          selectedFamily.chordFretsByString.forEach((frets, stringIndex) => frets.forEach((fret) => expectedVisibleKeys.add(`${stringIndex}:${fret}`)));
+        }
+      }
+      assert.equal(occurrences(overview, 'data-overview-visible-in-view="true"'), expectedVisibleKeys.size, `${selectedMode.name} ${effectiveView}/${overlay} must expose exactly its visible core plus overlay references`);
+      assert.equal(occurrences(overview, 'class="overview-note omitted'), fullEntries.length - expectedVisibleKeys.size, `${selectedMode.name} must hide non-core notes not selected by the overlay`);
+
       let expectedRoots = 0;
       for (const string of data.strings) {
         for (let fret = overviewMinFret; fret <= overviewMaxFret; fret += 1) {
@@ -257,31 +295,47 @@ for (const focusMode of overviewFocuses) {
       }
       assert.equal(occurrences(overview, 'data-overview-root="true"'), expectedRoots, `${selectedMode.name} must ring every visible tonic`);
       const expectedCharacteristics = overlay === "characteristic"
-        ? renderer.collectEntries(data, selectedMode, "full").flat()
-          .filter((entry) => selectedMode.characteristicDegrees.includes(entry.tone.degree)).length
+        ? fullEntries.filter((entry) => selectedMode.characteristicDegrees.includes(entry.tone.degree)).length
         : 0;
       assert.equal(occurrences(overview, 'data-overview-characteristic="true"'), expectedCharacteristics, `${selectedMode.name} characteristic highlights must stay inside its contour`);
-      const modalTonicDegrees = new Set(renderer.overlayFor(selectedMode, "triad").degrees);
-      const expectedModalTonicNotes = overlay === "triad"
-        ? renderer.collectEntries(data, selectedMode, "full").flat()
-          .filter((entry) => modalTonicDegrees.has(entry.tone.degree)).length
-        : 0;
-      assert.equal(expectedModalTonicNotes, overlay === "triad" ? expectedModalTonicCounts.get(selectedMode.id) : 0, `${selectedMode.name} modal tonic triad must retain its audited target count`);
-      assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), expectedModalTonicNotes, `${selectedMode.name} modal tonic chord highlights must stay inside its contour`);
-      if (overlay === "triad") {
-        const modalTonicFormula = [...modalTonicDegrees].map(renderer.prettyDegree).join(" + ");
-        assert(overview.includes(`${selectedMode.tonic} ${selectedMode.tonicChord.triadQuality} tonic triad · ${modalTonicFormula} use violet fills`), `${selectedMode.name} modal tonic caption must show chord identity and formula`);
-        assert(overview.includes("not a single chord voicing"), `${selectedMode.name} modal tonic description must distinguish a tone map from a grip`);
+      if (overlay === "characteristic") {
+        const characteristicFormula = selectedMode.characteristicDegrees.map(renderer.prettyDegree).join(" + ");
+        assert(overview.includes(`${selectedMode.characteristicDegrees.length === 1 ? "Characteristic tone" : "Characteristic tones"} · ${characteristicFormula}`), `${selectedMode.name} must label its characteristic interval formula`);
+        assert(overview.includes(".overview-note.characteristic .overview-disc{fill:#fff;stroke:#b45309"), "Characteristic highlights must use white discs with amber edges");
       }
-      const selectedFamily = data.positionFamilies.find((family) => family.position === selectedMode.position);
+
+      const modalTonicDegrees = overlay === "triad" || overlay === "seventh"
+        ? new Set(renderer.overlayFor(selectedMode, overlay).degrees)
+        : new Set();
+      const expectedModalTonicNotes = modalTonicDegrees.size
+        ? fullEntries.filter((entry) => modalTonicDegrees.has(entry.tone.degree)).length
+        : 0;
+      if (overlay === "triad") assert.equal(expectedModalTonicNotes, expectedModalTonicCounts.get(selectedMode.id), `${selectedMode.name} modal tonic triad must retain its audited target count`);
+      if (overlay === "seventh") assert.equal(expectedModalTonicNotes, expectedModalSeventhCounts.get(selectedMode.id), `${selectedMode.name} modal tonic seventh must retain its audited target count`);
+      assert.equal(occurrences(overview, 'data-overview-modal-tonic-chord="true"'), expectedModalTonicNotes, `${selectedMode.name} modal tonic chord highlights must stay inside its contour`);
+      if (overlay === "triad" || overlay === "seventh") {
+        const modalTonicFormula = [...modalTonicDegrees].map(renderer.prettyDegree).join(" + ");
+        const heading = renderer.overlayFor(selectedMode, overlay).heading;
+        assert(overview.includes(`${heading} · ${modalTonicFormula}`), `${selectedMode.name} ${overlay} caption must show chord quality and interval formula`);
+        assert(overview.includes("not a single chord voicing"), `${selectedMode.name} modal tonic description must distinguish a tone map from a grip`);
+        assert(overview.includes(`data-overview-modal-tonic-kind="${overlay}"`), `${selectedMode.name} chord targets must identify the ${overlay} overlay`);
+      }
+      const expectedAddedSevenths = overlay === "seventh"
+        ? fullEntries.filter((entry) => entry.tone.degree === selectedMode.tones[6].degree).length
+        : 0;
+      assert.equal(occurrences(overview, 'data-overview-added-seventh="true"'), expectedAddedSevenths, `${selectedMode.name} must distinguish the seventh added above its tonic triad`);
+      if (overlay === "seventh") assert(overview.includes(`outlined ${renderer.prettyDegree(selectedMode.tones[6].degree)} extends the triad`), `${selectedMode.name} must explain the outlined added seventh`);
+
       const expectedCagedNotes = overlay === "caged"
         ? selectedFamily.chordFretsByString.reduce((total, frets) => total + frets.length, 0)
         : 0;
       assert.equal(occurrences(overview, 'data-overview-caged-chord="true"'), expectedCagedNotes, `${selectedMode.name} must highlight exactly one parent-major ${selectedFamily.cagedForm}-form voicing`);
       const expectedCagedDegreeCounts = new Map([["1", 0], ["3", 0], ["5", 0]]);
+      const cagedFretKeys = new Set();
       if (overlay === "caged") {
         for (const [stringIndex, frets] of selectedFamily.chordFretsByString.entries()) {
           for (const fret of frets) {
+            cagedFretKeys.add(`${stringIndex}:${fret}`);
             const pc = (data.strings[stringIndex].openPitchClass + fret) % 12;
             const degree = parentChordDegreeByPitchClass.get(pc);
             expectedCagedDegreeCounts.set(degree, expectedCagedDegreeCounts.get(degree) + 1);
@@ -294,12 +348,6 @@ for (const focusMode of overviewFocuses) {
       const renderedCagedDegreePairs = [...overview.matchAll(/data-overview-caged-degree="([135])"[^>]*>.*?<text class="overview-degree"[^>]*>([135])<\/text>/g)];
       assert.equal(renderedCagedDegreePairs.length, expectedCagedNotes, `${selectedMode.name} must visibly render every CAGED chord degree`);
       assert(renderedCagedDegreePairs.every((match) => match[1] === match[2]), `${selectedMode.name} CAGED marker text must match its parent-major chord degree`);
-      const cagedFretKeys = new Set();
-      if (overlay === "caged") {
-        selectedFamily.chordFretsByString.forEach((frets, stringIndex) => {
-          frets.forEach((fret) => cagedFretKeys.add(`${stringIndex}:${fret}`));
-        });
-      }
       const expectedDisplayedDegrees = data.strings.flatMap((string, stringIndex) => {
         const degrees = [];
         for (let fret = overviewMinFret; fret <= overviewMaxFret; fret += 1) {
@@ -313,8 +361,7 @@ for (const focusMode of overviewFocuses) {
       const renderedDisplayedDegrees = [...overview.matchAll(/<text class="overview-degree"[^>]*>([^<]+)<\/text>/g)].map((match) => match[1]);
       assert.deepEqual(renderedDisplayedDegrees, expectedDisplayedDegrees, `${selectedMode.name} must use parent degrees only on teal CAGED notes and modal degrees everywhere else`);
       if (overlay === "caged") {
-        assert(overview.includes(`${data.parentScale.tonic} major chord = teal 1 · 3 · 5`), `${selectedMode.name} CAGED caption must disclose its chord-relative labels`);
-        assert(overview.includes(`rings mark ${selectedMode.tonic} tonic`), `${selectedMode.name} CAGED caption must identify the modal tonic rings`);
+        assert(overview.includes(`Parent-major CAGED chord · P${selectedMode.position} ${selectedFamily.cagedForm}-form ${data.parentScale.tonic} major · 1 + 3 + 5`), `${selectedMode.name} CAGED caption must identify its family, form, chord, and formula`);
         assert(overview.includes("all other interval labels remain relative"), `${selectedMode.name} CAGED description must disclose the two reference frames`);
       }
       for (const mode of data.modes) {
@@ -330,6 +377,7 @@ for (const focusMode of overviewFocuses) {
 
 assert.equal(renderer.overviewFocusMode(data, "not-a-mode"), null);
 assert.equal(renderer.normalizeOverviewOverlay("triad"), "triad");
+assert.equal(renderer.normalizeOverviewOverlay("seventh"), "seventh");
 assert.equal(renderer.normalizeOverviewOverlay("caged"), "caged");
 assert.equal(renderer.normalizeOverviewOverlay("not-an-overlay", false), "none");
 assert.equal(renderer.normalizeOverviewOverlay("not-an-overlay", true), "characteristic");
@@ -347,13 +395,16 @@ assert(indexHtml.includes('id="mode-reference-body"'), "The cheat sheet must inc
 assert(indexHtml.includes('id="overview-overlay"'), "The connected overview must offer one compact position-overlay selector");
 assert(indexHtml.includes('id="fret-spacing"'), "Individual boxes must offer a fret-spacing selector");
 assert(indexHtml.includes('<option value="guitar">Guitar-like — tapered frets</option>'), "Fret spacing must offer a guitar-proportional comparison");
-assert(indexHtml.includes('<option value="triad">Modal tonic chord tones</option>'), "The position overlay must offer modal tonic chord tones");
+assert(indexHtml.includes('<option value="triad">Tonic triad</option>'), "The overview learning highlight must offer the modal tonic triad");
+assert(indexHtml.includes('<option value="seventh">Tonic seventh chord</option>'), "The overview learning highlight must offer the modal tonic seventh chord");
 assert(indexHtml.includes('value="caged"'), "The position overlay must offer parent-major CAGED chord tones");
 assert(indexHtml.includes("CAGED is five overlapping fretboard regions"), "The cheat sheet must explain CAGED as a location framework");
 assert(indexHtml.includes("Every mode can be played in every usable CAGED region"), "The cheat sheet must prevent fixed mode-to-CAGED assignments");
 assert(appSource.includes('window.addEventListener("hashchange"'), "Page navigation must respond to browser Back and Forward");
+assert.equal(occurrences(appSource, "view: project.settings.view"), 2, "On-page and downloaded overviews must receive the selected note view");
+assert(appSource.includes("view: candidate.settings.view"), "Imported projects must preflight the selected overview note view");
 assert(appSource.includes('normalized.settings.fretSpacing = "compact"'), "Saved projects must migrate to the compact fret layout");
 assert(appSource.includes('fretSpacingControl.addEventListener("change"'), "Fret-spacing changes must rerender the individual boxes");
 assert(appSource.includes("renderTheoryReference();"), "Theory reference rows must update with imported project data");
 
-console.log("Verified the connected overview, three fret-spacing layouts, seven modal boxes, and two-view theory reference.");
+console.log("Verified the connected learning overlays, three note views, three fret layouts, seven modal boxes, and theory reference.");

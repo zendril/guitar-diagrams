@@ -111,7 +111,7 @@
       || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
       || !["compact", "guitar", "wide"].includes(candidate.settings.fretSpacing)
       || !overviewFocuses.has(candidate.settings.overviewFocus)
-      || !["none", "characteristic", "triad", "caged"].includes(candidate.settings.overviewOverlay)) {
+      || !["none", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
     }
     if (!Array.isArray(candidate.data.strings) || candidate.data.strings.length !== 6) {
@@ -223,7 +223,8 @@
   function preflightProject(candidate) {
     renderer.renderOverviewSvg(candidate.data, {
       focusMode: candidate.settings.overviewFocus,
-      overlay: candidate.settings.overviewOverlay
+      overlay: candidate.settings.overviewOverlay,
+      view: candidate.settings.view
     });
     for (const mode of candidate.data.modes) {
       renderer.renderModeSvg(candidate.data, mode, candidate.settings);
@@ -294,7 +295,8 @@
     overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
     overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, {
       focusMode: project.settings.overviewFocus,
-      overlay: project.settings.overviewOverlay
+      overlay: project.settings.overviewOverlay,
+      view: project.settings.view
     });
   }
 
@@ -362,7 +364,8 @@
   function exportOverview() {
     const markup = renderer.renderOverviewSvg(project.data, {
       focusMode: project.settings.overviewFocus,
-      overlay: project.settings.overviewOverlay
+      overlay: project.settings.overviewOverlay,
+      view: project.settings.view
     });
     const filename = `${renderer.overviewFileStem(project.data, project.settings.overviewFocus)}.svg`;
     downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);

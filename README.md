@@ -11,8 +11,8 @@ Open `index.html` directly in a browser. No installation or build step is requir
 The editor provides:
 
 - a connected-position overview with five overlapping physical contours and all seven modal root anchors;
-- a mode-focus control that relabels the shared fretboard from the selected tonic and emphasizes its exact contour, roots, and characteristic tones;
-- a focused-position overlay that switches among modal characteristic tones, modal tonic-chord targets, and parent-major CAGED chord tones;
+- a mode-focus control that relabels the shared fretboard from the selected tonic and carries its interval formula and pentatonic/full-scale note treatment into the connected map;
+- a focused-position learning highlight that switches among characteristic tones, modal tonic-triad and tonic-seventh targets, and parent-major CAGED chord tones;
 - one separate diagram for each mode;
 - a full-scale view with all seven notes shown equally;
 - a full-scale view with the pentatonic core emphasized;
@@ -46,6 +46,7 @@ npm test
 - Colored outer ring: tonic.
 - Thick amber marker edge: note selected by the active learning highlight.
 - Violet overview marker: modal tonic-triad target inside the focused contour.
+- Violet overview marker with a violet-outlined seventh: modal tonic-seventh target, shown as the tonic triad plus its added seventh.
 - Teal overview marker: note in the selected parent-major CAGED reference voicing.
 - Stepped contour: derived from the notes shown on each string.
 
@@ -60,6 +61,8 @@ The characteristic-tone highlight uses `4 + 7` for Ionian, `6` for Dorian, `♭2
 A tonic triad is built by taking every other note from the tonic: scale degrees `1–3–5`. Ionian, Lydian, and Mixolydian have a major tonic triad (`1 3 5`); Dorian, Phrygian, and Aeolian have a minor tonic triad (`1 ♭3 5`); Locrian has a diminished tonic triad (`1 ♭3 ♭5`). These are useful resolution targets inside each box.
 
 The overview intentionally shows five broad position families rather than pretending the seven modes occupy seven unrelated regions. Ionian/Locrian share position family 1, and Phrygian/Lydian share position family 3; choosing either mode reveals its exact low-E boundary while the other position families remain visible as context.
+
+When a mode is focused, the connected overview repeats the same compact teaching hints as its individual diagram: the mode formula, the active full/pentatonic note treatment, and the selected learning highlight's chord quality and interval formula. In pentatonic-only view, a selected overlay target outside the five-note core remains visible as a labeled reference rather than making the learning highlight disappear.
 
 ## How CAGED relates to the modal boxes
 

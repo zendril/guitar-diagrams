@@ -19,11 +19,11 @@
     stringSpacing: (286 - 138) / 5
   });
   const OVERVIEW_WIDTH = 1440;
-  const OVERVIEW_HEIGHT = 430;
-  const OVERVIEW_PLOT = { left: 80, right: 1400, top: 125, bottom: 275 };
+  const OVERVIEW_HEIGHT = 460;
+  const OVERVIEW_PLOT = { left: 80, right: 1400, top: 145, bottom: 295 };
   const VALID_VIEWS = new Set(["full", "combined", "pentatonic"]);
   const VALID_OVERLAYS = new Set(["none", "characteristic", "triad", "seventh"]);
-  const VALID_OVERVIEW_OVERLAYS = new Set(["none", "characteristic", "triad", "caged"]);
+  const VALID_OVERVIEW_OVERLAYS = new Set(["none", "characteristic", "triad", "seventh", "caged"]);
   const VALID_FRET_SPACINGS = new Set(["compact", "guitar", "wide"]);
 
   const esc = (value) => String(value)
@@ -166,6 +166,15 @@
     return "full mode with pentatonic emphasis";
   }
 
+  function modeViewSummary(mode, requestedView) {
+    const view = normalizeView(requestedView);
+    const omitted = mode.tones.filter((item) => !item.core).map((item) => prettyDegree(item.degree)).join(" and ");
+    const projectDefined = mode.pentatonicNote ? " · project-defined" : "";
+    if (view === "pentatonic") return `${pentatonicDisplayName(mode)} · five-note core${projectDefined}`;
+    if (view === "full") return `Mode ${mode.numeral} · all seven notes shown equally`;
+    return `Mode ${mode.numeral} · pentatonic emphasized · hollow ${omitted} are modal color tones${mode.pentatonicNote ? " · project-defined core" : ""}`;
+  }
+
   function overviewFocusMode(data, requestedFocus) {
     if (!requestedFocus || requestedFocus === "all") return null;
     return data.modes.find((mode) => mode.id === requestedFocus) || null;
@@ -185,14 +194,19 @@
   function renderOverviewSvg(data, options = {}) {
     const focusMode = overviewFocusMode(data, options.focusMode);
     const focusId = focusMode ? focusMode.id : "all";
+    const requestedView = normalizeView(options.view);
+    const view = focusMode ? requestedView : "full";
     const requestedOverlay = normalizeOverviewOverlay(options.overlay, options.showCharacteristic);
     const overviewOverlay = focusMode ? requestedOverlay : "none";
     const showCharacteristic = overviewOverlay === "characteristic";
     const focusFamily = focusMode ? positionFamilyFor(data, focusMode.position) : null;
-    const modalTonicTriad = focusMode && overviewOverlay === "triad"
-      ? overlayFor(focusMode, "triad")
+    const modalTonicKind = overviewOverlay === "triad" || overviewOverlay === "seventh"
+      ? overviewOverlay
+      : null;
+    const modalTonicChord = focusMode && modalTonicKind
+      ? overlayFor(focusMode, modalTonicKind)
       : { degrees: [] };
-    const modalTonicDegrees = new Set(modalTonicTriad.degrees);
+    const modalTonicDegrees = new Set(modalTonicChord.degrees);
     const cagedChordFrets = new Set();
     if (overviewOverlay === "caged" && focusFamily && Array.isArray(focusFamily.chordFretsByString)) {
       focusFamily.chordFretsByString.forEach((frets, stringIndex) => {
@@ -271,14 +285,18 @@
         const isRoot = Boolean(focusMode && pc === focusMode.tonicPitchClass);
         const isCharacteristic = Boolean(focusMode && showCharacteristic && insideFocus
           && focusMode.characteristicDegrees.includes(tone.degree));
-        const isModalTonicChord = Boolean(focusMode && overviewOverlay === "triad" && insideFocus
+        const isModalTonicChord = Boolean(focusMode && modalTonicKind && insideFocus
           && modalTonicDegrees.has(tone.degree));
+        const isAddedSeventh = Boolean(isModalTonicChord && modalTonicKind === "seventh"
+          && tone.degree === focusMode.tones[6].degree);
         const isCagedChord = cagedChordFrets.has(`${stringIndex}:${fret}`);
+        const visibleInsideFocus = Boolean(insideFocus
+          && (view !== "pentatonic" || tone.core || isCharacteristic || isModalTonicChord || isCagedChord));
         const cagedDegree = isCagedChord ? parentChordDegreeByPitchClass.get(pc) : null;
         if (isCagedChord && !cagedDegree) {
           throw new Error(`CAGED reference note on string ${string.number}, fret ${fret} is not in the parent-major triad`);
         }
-        entries.push({ string, stringIndex, fret, pc, tone, insideFocus, isRoot, isCharacteristic, isModalTonicChord, isCagedChord, cagedDegree });
+        entries.push({ string, stringIndex, fret, pc, tone, insideFocus, visibleInsideFocus, isRoot, isCharacteristic, isModalTonicChord, isAddedSeventh, isCagedChord, cagedDegree });
       }
       return entries;
     }).map((entry) => {
@@ -286,17 +304,25 @@
       const y = yForString(entry.stringIndex);
       const classes = [
         "overview-note",
-        entry.insideFocus ? "inside" : "",
+        entry.visibleInsideFocus ? "inside" : "",
+        entry.insideFocus && !entry.visibleInsideFocus ? "omitted" : "",
+        entry.insideFocus ? (view === "full" ? "equal" : entry.tone.core ? "core" : "optional") : "",
         entry.isRoot ? "root" : "",
         entry.isCharacteristic ? "characteristic" : "",
         entry.isModalTonicChord ? "modal-tonic-chord" : "",
+        entry.isAddedSeventh ? "added-seventh" : "",
         entry.isCagedChord ? "caged-chord" : ""
       ].filter(Boolean).join(" ");
       const degreeDescription = entry.isCagedChord
         ? `${data.parentScale.tonic} major chord degree ${entry.cagedDegree}, displayed; ${labelMode.tonic} ${labelMode.name} degree ${prettyDegree(entry.tone.degree)}`
         : `${labelMode.tonic} ${labelMode.name} degree ${prettyDegree(entry.tone.degree)}`;
-      const accessible = `String ${entry.string.number}, fret ${entry.fret}, ${data.pitchClassNames[entry.pc]}, ${degreeDescription}${entry.insideFocus ? ", inside the selected contour" : ""}${entry.isRoot ? ", tonic" : ""}${entry.isCharacteristic ? ", characteristic tone" : ""}${entry.isModalTonicChord ? `, part of the ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} modal tonic triad` : ""}${entry.isCagedChord ? `, part of the ${focusFamily.cagedForm}-form parent-major chord reference shape` : ""}`;
-      return `<g class="${classes}" data-overview-note="true"${entry.insideFocus ? ' data-inside-focus="true"' : ""}${entry.isRoot ? ' data-overview-root="true"' : ""}${entry.isCharacteristic ? ' data-overview-characteristic="true"' : ""}${entry.isModalTonicChord ? ' data-overview-modal-tonic-chord="true"' : ""}${entry.isCagedChord ? ` data-overview-caged-chord="true" data-overview-caged-degree="${entry.cagedDegree}"` : ""} transform="translate(${x} ${y})">`
+      const modalChordDescription = focusMode && modalTonicKind
+        ? modalTonicKind === "seventh"
+          ? `${focusMode.tonic} ${focusMode.tonicChord.seventhQuality} modal tonic seventh chord`
+          : `${focusMode.tonic} ${focusMode.tonicChord.triadQuality} modal tonic triad`
+        : "";
+      const accessible = `String ${entry.string.number}, fret ${entry.fret}, ${data.pitchClassNames[entry.pc]}, ${degreeDescription}${entry.insideFocus ? ", inside the selected contour" : ""}${entry.insideFocus && !entry.visibleInsideFocus ? ", omitted from the selected pentatonic-only view" : ""}${view === "pentatonic" && entry.visibleInsideFocus && !entry.tone.core ? ", outside the pentatonic core and retained as a learning-highlight reference" : ""}${entry.isRoot ? ", tonic" : ""}${entry.isCharacteristic ? ", characteristic tone" : ""}${entry.isModalTonicChord ? `, part of the ${modalChordDescription}` : ""}${entry.isAddedSeventh ? ", the added seventh above the tonic triad" : ""}${entry.isCagedChord ? `, part of the ${focusFamily.cagedForm}-form parent-major chord reference shape` : ""}`;
+      return `<g class="${classes}" data-overview-note="true"${entry.insideFocus ? ' data-inside-focus="true"' : ""}${entry.visibleInsideFocus ? ' data-overview-visible-in-view="true"' : ""}${entry.isRoot ? ' data-overview-root="true"' : ""}${entry.isCharacteristic ? ' data-overview-characteristic="true"' : ""}${entry.isModalTonicChord ? ` data-overview-modal-tonic-chord="true" data-overview-modal-tonic-kind="${modalTonicKind}"` : ""}${entry.isAddedSeventh ? ' data-overview-added-seventh="true"' : ""}${entry.isCagedChord ? ` data-overview-caged-chord="true" data-overview-caged-degree="${entry.cagedDegree}"` : ""} transform="translate(${x} ${y})">`
         + `<title>${esc(accessible)}</title>`
         + (entry.isRoot ? `<circle class="overview-root-ring" style="stroke:${focusMode.accent}" r="18"/>` : "")
         + `<circle class="overview-disc" r="12"/>`
@@ -310,7 +336,7 @@
         const stringIndex = data.strings.findIndex((string) => string.number === mode.anchor.string);
         const x = xForFret(mode.anchor.fret);
         const y = yForString(stringIndex);
-        const labelY = index % 2 === 0 ? 347 : 385;
+        const labelY = index % 2 === 0 ? 370 : 410;
         const state = !focusMode ? "all" : focusMode.id === mode.id ? "active" : "context";
         const anchorFamily = positionFamilyFor(data, mode.position);
         const cagedFormLabel = overviewOverlay === "caged" && anchorFamily
@@ -327,27 +353,54 @@
     const characteristicDegrees = focusMode
       ? focusMode.characteristicDegrees.map(prettyDegree).join(" + ")
       : "";
-    const modalTonicFormula = modalTonicTriad.degrees.map(prettyDegree).join(" + ");
+    const visibleModeDegrees = new Set(view === "pentatonic"
+      ? labelMode.tones.filter((tone) => tone.core).map((tone) => tone.degree)
+      : labelMode.tones.map((tone) => tone.degree));
+    const activeOverlayDegrees = overviewOverlay === "characteristic" && focusMode
+      ? focusMode.characteristicDegrees
+      : modalTonicChord.degrees;
+    const outsideCoreOverlayDegrees = view === "pentatonic"
+      ? activeOverlayDegrees.filter((degree) => !visibleModeDegrees.has(degree))
+      : [];
+    const outsideCoreOverlayFormula = outsideCoreOverlayDegrees.map(prettyDegree).join(" + ");
+    const modalTonicFormula = modalTonicChord.degrees.map(prettyDegree).join(" + ");
+    const modeFormula = (view === "pentatonic" ? labelMode.tones.filter((tone) => tone.core) : labelMode.tones)
+      .map((tone) => prettyDegree(tone.degree)).join("  ");
     const familySummary = familyModes.map((mode) => {
       const family = positionFamilyFor(data, mode.position);
       return `P${mode.position}${family ? ` ${family.cagedForm}-form` : ""}`;
     }).join(" · ");
-    const caption = focusMode
-      ? overviewOverlay === "characteristic"
-        ? `${focusMode.name} intervals · roots ringed · characteristic ${characteristicDegrees} use amber edges`
-        : overviewOverlay === "triad"
-          ? `${focusMode.name} intervals · roots ringed · ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} tonic triad · ${modalTonicFormula} use violet fills`
-        : overviewOverlay === "caged"
-          ? `${focusMode.name} intervals on other notes · P${focusMode.position} ${focusFamily.cagedForm}-form ${data.parentScale.tonic} major chord = teal 1 · 3 · 5 · rings mark ${focusMode.tonic} tonic`
-          : `${focusMode.name} intervals · roots ringed`
-      : `Parent-major intervals · ${familySummary} · seven modal roots`;
+    const viewCaption = focusMode
+      ? `${modeViewSummary(focusMode, view)}${view === "pentatonic" && overviewOverlay !== "none" ? " · highlighted outside-core targets retained" : ""}`
+      : `Parent major scale · ${familySummary} · seven modal roots`;
+    let learningCaption = "Focus a mode to compare its learning highlights";
+    let learningCaptionColor = "#4b5563";
+    if (focusMode && overviewOverlay === "characteristic") {
+      learningCaption = `${focusMode.characteristicDegrees.length === 1 ? "Characteristic tone" : "Characteristic tones"} · ${characteristicDegrees}${outsideCoreOverlayDegrees.length ? ` · ${outsideCoreOverlayFormula} shown as outside-core reference` : ""}`;
+      learningCaptionColor = "#92400e";
+    } else if (focusMode && modalTonicKind) {
+      learningCaption = `${modalTonicChord.heading} · ${modalTonicFormula}${outsideCoreOverlayDegrees.length ? ` · ${outsideCoreOverlayFormula} shown as outside-core reference` : ""}${modalTonicKind === "seventh" ? ` · outlined ${prettyDegree(focusMode.tones[6].degree)} extends the triad` : ""}`;
+      learningCaptionColor = "#5b21b6";
+    } else if (focusMode && overviewOverlay === "caged") {
+      learningCaption = `Parent-major CAGED chord · P${focusMode.position} ${focusFamily.cagedForm}-form ${data.parentScale.tonic} major · 1 + 3 + 5 · teal labels use parent-chord intervals${view === "pentatonic" ? " · outside-core chord tones retained" : ""}`;
+      learningCaptionColor = "#0f766e";
+    } else if (focusMode) {
+      learningCaption = `Tonic roots ringed · no learning highlight selected`;
+    }
     const overlayDescription = overviewOverlay === "caged"
       ? ` The ${focusFamily.cagedForm}-form ${data.parentScale.tonic} major chord reference shape is highlighted. Its teal notes use parent-major chord degrees 1, 3, and 5; all other interval labels remain relative to ${focusMode.tonic}.`
-      : overviewOverlay === "triad"
-        ? ` Every ${focusMode.tonic} ${focusMode.tonicChord.triadQuality} tonic-triad target inside the selected contour is highlighted. This is a chord-tone map, not a single chord voicing.`
+      : modalTonicKind
+        ? ` Every ${focusMode.tonic} ${modalTonicKind === "seventh" ? focusMode.tonicChord.seventhQuality : focusMode.tonicChord.triadQuality} modal tonic ${modalTonicKind === "seventh" ? "seventh-chord" : "triad"} target inside the selected contour is highlighted. This is a chord-tone map, not a single chord voicing.`
         : "";
+    const viewDescription = focusMode
+      ? view === "full"
+        ? " Every note inside the selected contour is displayed equally."
+        : view === "pentatonic"
+          ? ` Only notes in the five-note pentatonic core are emphasized inside the selected contour.${overviewOverlay !== "none" ? " Selected overlay targets outside that core remain visible for comparison." : ""}`
+          : " Filled notes inside the selected contour form its pentatonic core; hollow notes are full-mode color tones outside that core."
+      : "";
     const description = focusMode
-      ? `A continuous fretboard from fret ${minFret} through ${maxFret}, relabeled for ${focusMode.tonic} ${focusMode.name}. Its exact contour is emphasized while the five position families remain as context.${overlayDescription}`
+      ? `A continuous fretboard from fret ${minFret} through ${maxFret}, relabeled for ${focusMode.tonic} ${focusMode.name}. Its exact contour is emphasized while the five position families remain as context.${viewDescription}${overlayDescription}`
       : `A continuous ${data.parentScale.tonic} major fretboard from fret ${minFret} through ${maxFret}. Five overlapping position contours contain seven relative modal roots.`;
     const anchorDescription = [...data.modes]
       .sort((a, b) => a.anchor.fret - b.anchor.fret)
@@ -355,21 +408,23 @@
       .join("; ");
     const titleId = `relative-mode-overview-${focusId}-title`;
     const descId = `relative-mode-overview-${focusId}-desc`;
-    return `<svg xmlns="http://www.w3.org/2000/svg" class="overview-svg${focusMode ? " is-focused" : ""}" width="15in" height="4.48in" viewBox="0 0 ${OVERVIEW_WIDTH} ${OVERVIEW_HEIGHT}" role="img" aria-labelledby="${titleId} ${descId}" data-diagram="overview" data-focus="${focusId}" data-overlay="${overviewOverlay}" data-fret-min="${minFret}" data-fret-max="${maxFret}">`
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="overview-svg${focusMode ? " is-focused" : ""}" width="15in" height="4.79in" viewBox="0 0 ${OVERVIEW_WIDTH} ${OVERVIEW_HEIGHT}" role="img" aria-labelledby="${titleId} ${descId}" data-diagram="overview" data-focus="${focusId}" data-overlay="${overviewOverlay}" data-view="${view}" data-fret-min="${minFret}" data-fret-max="${maxFret}">`
       + `<title id="${titleId}">Connected relative-mode positions${focusMode ? ` — ${esc(focusMode.name)} focus` : ""}</title>`
       + `<desc id="${descId}">${esc(`${description} ${anchorDescription}.`)}</desc>`
       + `<style>
         .overview-svg{background:#fff;color:#111827;font-family:Inter,Segoe UI,Arial,sans-serif;text-rendering:geometricPrecision}
-        .overview-svg .overview-title{font-size:25px;font-weight:700;fill:#111827}.overview-svg .overview-caption{font-size:14px;fill:#4b5563}
+        .overview-svg .overview-title{font-size:25px;font-weight:700;fill:#111827}.overview-svg .overview-formula{font-size:15px;font-weight:700;fill:#111827;text-anchor:end}.overview-svg .overview-view-caption{font-size:14px;fill:#4b5563}.overview-svg .overview-learning-caption{font-size:13px;font-weight:650}
         .overview-svg .overview-fret,.overview-svg .overview-string{stroke:#6b7280;vector-effect:non-scaling-stroke}.overview-svg .overview-fret{stroke-width:1}.overview-svg .overview-fret.landmark{stroke-width:2.5}.overview-svg .overview-string{stroke-linecap:round}
         .overview-svg .overview-fret-label,.overview-svg .overview-string-label{font-size:12px;fill:#4b5563;text-anchor:middle;dominant-baseline:middle}.overview-svg .overview-fret-label.landmark{font-weight:700;fill:#111827}.overview-svg .overview-string-label{text-anchor:end}
         .overview-svg .overview-contour-path{fill:none;stroke-linejoin:round;vector-effect:non-scaling-stroke}.overview-svg .overview-contour.family .overview-contour-path{stroke-width:4;opacity:.9}.overview-svg .overview-contour.context .overview-contour-path{stroke-width:1.5;opacity:.62}.overview-svg .overview-contour.active .overview-contour-path{fill-opacity:.035;stroke-width:5;opacity:1}
-        .overview-svg .overview-disc{fill:#fff;stroke:#4b5563;stroke-width:1.6;vector-effect:non-scaling-stroke}.overview-svg .overview-degree{font-size:11px;font-weight:700;fill:#111827;text-anchor:middle;dominant-baseline:middle}.overview-svg.is-focused .overview-note{opacity:.43}.overview-svg.is-focused .overview-note.inside,.overview-svg.is-focused .overview-note.root{opacity:1}.overview-svg .overview-note.inside .overview-disc{fill:#111827;stroke:#111827}.overview-svg .overview-note.inside .overview-degree{fill:#fff}.overview-svg .overview-note.characteristic .overview-disc{stroke:#b45309;stroke-width:4.5}.overview-svg .overview-note.modal-tonic-chord .overview-disc{fill:#6d28d9;stroke:#6d28d9}.overview-svg .overview-note.modal-tonic-chord .overview-degree{fill:#fff}.overview-svg .overview-note.caged-chord .overview-disc{fill:#0f766e;stroke:#0f766e}.overview-svg .overview-note.caged-chord .overview-degree{fill:#fff}.overview-svg .overview-root-ring{fill:none;stroke-width:3;vector-effect:non-scaling-stroke}
+        .overview-svg .overview-disc{fill:#fff;stroke:#4b5563;stroke-width:1.6;vector-effect:non-scaling-stroke}.overview-svg .overview-degree{font-size:11px;font-weight:700;fill:#111827;text-anchor:middle;dominant-baseline:middle}.overview-svg.is-focused .overview-note{opacity:.32}.overview-svg.is-focused .overview-note.inside,.overview-svg.is-focused .overview-note.root,.overview-svg.is-focused .overview-note.caged-chord{opacity:1}.overview-svg.is-focused .overview-note.omitted{display:none}.overview-svg .overview-note.inside .overview-disc{fill:#111827;stroke:#111827}.overview-svg .overview-note.inside .overview-degree{fill:#fff}.overview-svg .overview-note.inside.optional .overview-disc{fill:#fff;stroke:#111827}.overview-svg .overview-note.inside.optional .overview-degree{fill:#111827}.overview-svg .overview-note.characteristic .overview-disc{fill:#fff;stroke:#b45309;stroke-width:4.5}.overview-svg .overview-note.characteristic .overview-degree{fill:#111827}.overview-svg .overview-note.modal-tonic-chord .overview-disc{fill:#6d28d9;stroke:#5b21b6;stroke-width:1.8}.overview-svg .overview-note.modal-tonic-chord .overview-degree{fill:#fff}.overview-svg .overview-note.modal-tonic-chord.added-seventh.core .overview-disc,.overview-svg .overview-note.modal-tonic-chord.added-seventh.equal .overview-disc{fill:#111827;stroke:#6d28d9;stroke-width:4}.overview-svg .overview-note.modal-tonic-chord.added-seventh.optional .overview-disc{fill:#fff;stroke:#6d28d9;stroke-width:4}.overview-svg .overview-note.modal-tonic-chord.added-seventh.optional .overview-degree{fill:#5b21b6}.overview-svg .overview-note.caged-chord .overview-disc{fill:#0f766e;stroke:#0f766e}.overview-svg .overview-note.caged-chord .overview-degree{fill:#fff}.overview-svg .overview-root-ring{fill:none;stroke-width:3;vector-effect:non-scaling-stroke}
         .overview-svg .overview-anchor-ring{fill:none;stroke-width:3;vector-effect:non-scaling-stroke}.overview-svg .overview-anchor-leader{stroke-width:1.5;vector-effect:non-scaling-stroke}.overview-svg .overview-anchor-label{font-size:13px;font-weight:700;text-anchor:middle}.overview-svg .overview-mode-anchor.context{opacity:.27}.overview-svg .overview-mode-anchor.active{opacity:1}
       </style>`
       + `<rect width="${OVERVIEW_WIDTH}" height="${OVERVIEW_HEIGHT}" fill="#fff"/>`
       + `<text class="overview-title" x="${OVERVIEW_PLOT.left}" y="34">How the boxes connect</text>`
-      + `<text class="overview-caption" x="${OVERVIEW_PLOT.left}" y="59">${esc(caption)}</text>`
+      + `<text class="overview-formula" x="${OVERVIEW_PLOT.right}" y="39">${esc(modeFormula)}</text>`
+      + `<text class="overview-view-caption" x="${OVERVIEW_PLOT.left}" y="61">${esc(viewCaption)}</text>`
+      + `<text class="overview-learning-caption" style="fill:${learningCaptionColor}" x="${OVERVIEW_PLOT.left}" y="85">${esc(learningCaption)}</text>`
       + familyContours + activeContour + fretLines.join("") + strings + fretLabels.join("") + notes + anchorCallouts
       + "</svg>";
   }
@@ -397,13 +452,7 @@
     const descId = `${mode.id}-${view}-desc`;
     const formulaTones = view === "pentatonic" ? mode.tones.filter((item) => item.core) : mode.tones;
     const formula = formulaTones.map((item) => prettyDegree(item.degree)).join("  ");
-    const omitted = mode.tones.filter((item) => !item.core).map((item) => prettyDegree(item.degree)).join(" and ");
-    const projectDefined = mode.pentatonicNote ? " · project-defined" : "";
-    const subtitle = view === "pentatonic"
-      ? `${pentatonicDisplayName(mode)} · five-note core${projectDefined}`
-      : view === "full"
-        ? `Mode ${mode.numeral} · all seven notes shown equally`
-        : `Mode ${mode.numeral} · pentatonic emphasized · hollow ${omitted} are modal color tones${mode.pentatonicNote ? " · project-defined core" : ""}`;
+    const subtitle = modeViewSummary(mode, view);
     const description = view === "pentatonic"
       ? `${mode.tonic} ${mode.name} position showing only its five-note ${mode.pentatonicName} core.${mode.pentatonicNote ? ` ${mode.pentatonicNote}.` : ""}`
       : view === "full"
@@ -531,6 +580,7 @@
     exportFileStem,
     prettyDegree,
     pentatonicDisplayName,
+    modeViewSummary,
     overlayFor,
     overviewFocusMode,
     overviewFileStem,
