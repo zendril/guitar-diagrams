@@ -194,11 +194,10 @@
   function renderOverviewSvg(data, options = {}) {
     const focusMode = overviewFocusMode(data, options.focusMode);
     const focusId = focusMode ? focusMode.id : "all";
-    const requestedView = normalizeView(options.view);
     const requestedOverlay = normalizeOverviewOverlay(options.overlay, options.showCharacteristic);
     const overviewOverlay = focusMode ? requestedOverlay : "none";
     const showFullNeckPentatonic = overviewOverlay === "pentatonic";
-    const view = focusMode ? (showFullNeckPentatonic ? "pentatonic" : requestedView) : "full";
+    const view = focusMode ? (showFullNeckPentatonic ? "pentatonic" : "combined") : "full";
     const showCharacteristic = overviewOverlay === "characteristic";
     const focusFamily = focusMode ? positionFamilyFor(data, focusMode.position) : null;
     const modalTonicKind = overviewOverlay === "triad" || overviewOverlay === "seventh"

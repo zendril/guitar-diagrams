@@ -236,7 +236,7 @@ for (const focusMode of overviewFocuses) {
       const overviewSvgTag = overview.match(/^<svg[^>]+>/)[0];
       const selectedMode = data.modes.find((mode) => mode.id === focusMode);
       const effectiveOverlay = selectedMode ? overlay : "none";
-      const effectiveView = selectedMode ? (overlay === "pentatonic" ? "pentatonic" : view) : "full";
+      const effectiveView = selectedMode ? (overlay === "pentatonic" ? "pentatonic" : "combined") : "full";
       assert(overview.startsWith("<svg"), `${focusMode} ${view}/${overlay} overview must be SVG`);
       assert(!overview.includes("undefined"), `${focusMode} ${view}/${overlay} overview contains undefined`);
       assert(!overview.includes("NaN"), `${focusMode} ${view}/${overlay} overview contains NaN`);
@@ -424,6 +424,30 @@ for (const focusMode of overviewFocuses) {
   }
 }
 
+const dorianCharacteristicFromPentatonic = renderer.renderOverviewSvg(data, {
+  focusMode: dorian.id,
+  overlay: "characteristic",
+  view: "pentatonic"
+});
+const dorianContourNoteGroups = [...dorianCharacteristicFromPentatonic.matchAll(
+  /<g class="overview-note(?: [^"]*)?"[^>]*data-inside-focus="true"[^>]*>[\s\S]*?<\/g>/g
+)].map((match) => match[0]);
+assert(dorianCharacteristicFromPentatonic.includes('data-overlay="characteristic" data-view="combined"'), "Dorian characteristic focus must ignore the individual-box pentatonic setting");
+assert.equal(dorianContourNoteGroups.length, 17, "Dorian characteristic focus must retain all 17 notes in its contour");
+assert(dorianContourNoteGroups.every((group) => group.includes('data-overview-visible-in-view="true"')), "Every Dorian contour note must remain visible in characteristic focus");
+assert.equal(occurrences(dorianCharacteristicFromPentatonic, 'class="overview-note omitted'), 0, "Dorian characteristic focus must omit no contour notes");
+assert.equal(
+  dorianContourNoteGroups.filter((group) => group.includes('<text class="overview-degree" x="0" y="1">2</text>')).length,
+  3,
+  "Dorian characteristic focus must retain all three degree-2 notes"
+);
+assert.equal(
+  dorianContourNoteGroups.filter((group) => group.includes('data-overview-characteristic="true"')
+    && group.includes('<text class="overview-degree" x="0" y="1">6</text>')).length,
+  2,
+  "Dorian characteristic focus must highlight both degree-6 notes"
+);
+
 assert.equal(renderer.overviewFocusMode(data, "not-a-mode"), null);
 assert.equal(renderer.normalizeOverviewOverlay("pentatonic"), "pentatonic");
 assert.equal(renderer.normalizeOverviewOverlay("triad"), "triad");
@@ -449,11 +473,12 @@ assert(indexHtml.includes('<option value="triad">Tonic triad</option>'), "The ov
 assert(indexHtml.includes('<option value="seventh">Tonic seventh chord</option>'), "The overview learning highlight must offer the modal tonic seventh chord");
 assert(indexHtml.includes('<option value="pentatonic">Pentatonic only — across neck</option>'), "The overview learning highlight must offer the full-neck pentatonic view");
 assert(indexHtml.includes('value="caged"'), "The position overlay must offer parent-major CAGED chord tones");
+assert(indexHtml.includes('<legend>Individual boxes — notes shown</legend>'), "The note-view controls must identify that they apply only to individual boxes");
 assert(indexHtml.includes("CAGED is five overlapping fretboard regions"), "The cheat sheet must explain CAGED as a location framework");
 assert(indexHtml.includes("Every mode can be played in every usable CAGED region"), "The cheat sheet must prevent fixed mode-to-CAGED assignments");
 assert(appSource.includes('window.addEventListener("hashchange"'), "Page navigation must respond to browser Back and Forward");
-assert.equal(occurrences(appSource, "view: project.settings.view"), 2, "On-page and downloaded overviews must receive the selected note view");
-assert(appSource.includes("view: candidate.settings.view"), "Imported projects must preflight the selected overview note view");
+assert.equal(occurrences(appSource, "view: project.settings.view"), 0, "Connected overviews must not inherit the individual-box note view");
+assert(!appSource.includes("view: candidate.settings.view"), "Imported projects must preflight the connected overview independently of the individual-box note view");
 assert(appSource.includes('normalized.settings.fretSpacing = "compact"'), "Saved projects must migrate to the compact fret layout");
 assert(appSource.includes('["none", "pentatonic", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)'), "Imported projects must accept the full-neck pentatonic overview overlay");
 assert(appSource.includes('fretSpacingControl.addEventListener("change"'), "Fret-spacing changes must rerender the individual boxes");

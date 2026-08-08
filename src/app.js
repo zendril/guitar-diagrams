@@ -223,8 +223,7 @@
   function preflightProject(candidate) {
     renderer.renderOverviewSvg(candidate.data, {
       focusMode: candidate.settings.overviewFocus,
-      overlay: candidate.settings.overviewOverlay,
-      view: candidate.settings.view
+      overlay: candidate.settings.overviewOverlay
     });
     for (const mode of candidate.data.modes) {
       renderer.renderModeSvg(candidate.data, mode, candidate.settings);
@@ -295,8 +294,7 @@
     overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
     overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, {
       focusMode: project.settings.overviewFocus,
-      overlay: project.settings.overviewOverlay,
-      view: project.settings.view
+      overlay: project.settings.overviewOverlay
     });
   }
 
@@ -364,8 +362,7 @@
   function exportOverview() {
     const markup = renderer.renderOverviewSvg(project.data, {
       focusMode: project.settings.overviewFocus,
-      overlay: project.settings.overviewOverlay,
-      view: project.settings.view
+      overlay: project.settings.overviewOverlay
     });
     const filename = `${renderer.overviewFileStem(project.data, project.settings.overviewFocus)}.svg`;
     downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);
