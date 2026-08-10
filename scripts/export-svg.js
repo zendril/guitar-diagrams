@@ -25,7 +25,8 @@ for (const target of targets) {
 const overviewDirectory = path.join(root, "exports", "overview");
 fs.mkdirSync(overviewDirectory, { recursive: true });
 const overviewMarkup = renderer.renderOverviewSvg(data, {
-  mode: "g-ionian",
+  tonicPitchClass: 7,
+  mode: "ionian",
   position: "all",
   overlay: "none"
 });

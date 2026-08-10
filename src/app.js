@@ -4,29 +4,28 @@
   const defaultData = window.GuitarDiagramData;
   const renderer = window.GuitarDiagramRenderer;
   const overviewFrame = document.getElementById("overview-frame");
+  const overviewTonicControl = document.getElementById("overview-tonic");
   const overviewModeControl = document.getElementById("overview-mode");
   const overviewPositionControl = document.getElementById("overview-position");
   const overviewOverlayControl = document.getElementById("overview-overlay");
-  const diagramsRoot = document.getElementById("diagrams");
-  const legendRoot = document.getElementById("legend");
+  const overviewSelectionSummary = document.getElementById("overview-selection-summary");
   const status = document.getElementById("status");
   const importInput = document.getElementById("import-project");
-  const overlayControl = document.getElementById("overlay");
-  const fretSpacingControl = document.getElementById("fret-spacing");
   const modeReferenceBody = document.getElementById("mode-reference-body");
   const cagedReference = document.getElementById("caged-reference");
   const pageViews = document.querySelectorAll("[data-page-view]");
   const pageLinks = document.querySelectorAll("[data-page-link]");
   const storageKey = "guitar-diagrams-project-v2";
-  const defaultOverviewMode = defaultData.modes.find((mode) => mode.name === "Ionian") || defaultData.modes[0];
+  const majorScaleOffsets = [0, 2, 4, 5, 7, 9, 11];
+  const defaultTonicPitchClass = Number.isInteger(defaultData.parentScale.tonicPitchClass)
+    ? defaultData.parentScale.tonicPitchClass
+    : defaultData.parentScale.pitchClasses[0];
 
   let project = loadSavedProject() || {
     schemaVersion: 1,
     settings: {
-      view: "combined",
-      overlay: "none",
-      fretSpacing: "compact",
-      overviewMode: defaultOverviewMode.id,
+      overviewTonicPitchClass: defaultTonicPitchClass,
+      overviewMode: "ionian",
       overviewPosition: "all",
       overviewOverlay: "characteristic"
     },
@@ -62,65 +61,97 @@
     }
   }
 
+  function modeKeyFor(mode) {
+    return String(mode && (mode.key || mode.modeKey || mode.name) || "")
+      .trim()
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replaceAll(/^-|-$/g, "");
+  }
+
+  function hydrateMissing(target, source) {
+    if (!target || !source || typeof target !== "object" || typeof source !== "object") return;
+    for (const [key, value] of Object.entries(source)) {
+      if (target[key] === undefined) {
+        target[key] = structuredClone(value);
+      } else if (value && target[key] && !Array.isArray(value)
+        && typeof value === "object" && typeof target[key] === "object") {
+        hydrateMissing(target[key], value);
+      }
+    }
+  }
+
+  function genericModeKey(value, modes) {
+    if (!value || value === "all") return "ionian";
+    const normalizedValue = String(value).toLowerCase();
+    const matchingMode = modes.find((mode) => mode.id === value
+      || modeKeyFor(mode) === normalizedValue
+      || String(mode.name).toLowerCase() === normalizedValue);
+    return matchingMode ? modeKeyFor(matchingMode) : normalizedValue.replace(/^[a-g](?:s|f)?-/, "");
+  }
+
   function normalizeProject(candidate) {
     const normalized = structuredClone(candidate);
-    const legacyOverviewFocus = normalized && normalized.settings
-      ? normalized.settings.overviewFocus
-      : undefined;
-    if (normalized && normalized.settings && normalized.settings.overlay === undefined) {
-      normalized.settings.overlay = "none";
-    }
-    if (normalized && normalized.settings && normalized.settings.fretSpacing === undefined) {
-      normalized.settings.fretSpacing = "compact";
-    }
-    if (normalized && normalized.settings && normalized.settings.overviewOverlay === undefined) {
-      normalized.settings.overviewOverlay = normalized.settings.overviewCharacteristic === false ? "none" : "characteristic";
-    }
-    if (normalized && normalized.data && Array.isArray(normalized.data.modes)) {
+    if (!normalized || !normalized.settings || !normalized.data) return normalized;
+
+    hydrateMissing(normalized.data, defaultData);
+    normalized.data.sourceRevision = defaultData.sourceRevision;
+    if (Array.isArray(normalized.data.modes)) {
       for (const mode of normalized.data.modes) {
-        const matchingDefault = defaultData.modes.find((candidateMode) => candidateMode.id === mode.id);
-        if (!matchingDefault) continue;
-        if (!Array.isArray(mode.characteristicDegrees)) {
-          mode.characteristicDegrees = structuredClone(matchingDefault.characteristicDegrees);
-        }
-        if (!mode.tonicChord) mode.tonicChord = structuredClone(matchingDefault.tonicChord);
+        const key = modeKeyFor(mode);
+        const matchingDefault = defaultData.modes.find((candidateMode) => candidateMode.id === mode.id
+          || modeKeyFor(candidateMode) === key);
+        if (matchingDefault) hydrateMissing(mode, matchingDefault);
       }
     }
-    if (normalized && normalized.data && !Array.isArray(normalized.data.positionFamilies)) {
-      normalized.data.positionFamilies = structuredClone(defaultData.positionFamilies);
-    } else if (normalized && normalized.data && Array.isArray(normalized.data.positionFamilies)) {
+    if (Array.isArray(normalized.data.positionFamilies)) {
       for (const family of normalized.data.positionFamilies) {
         const matchingDefault = defaultData.positionFamilies.find((candidateFamily) => candidateFamily.position === family.position);
-        if (matchingDefault && !Array.isArray(family.chordFretsByString)) {
-          family.chordFretsByString = structuredClone(matchingDefault.chordFretsByString);
-        }
-        if (matchingDefault && !Array.isArray(family.scaleFretsByString)) {
-          family.scaleFretsByString = structuredClone(matchingDefault.scaleFretsByString);
-        }
-        if (matchingDefault && family.accent === undefined) {
-          family.accent = matchingDefault.accent;
-        }
+        if (matchingDefault) hydrateMissing(family, matchingDefault);
       }
     }
-    if (normalized && normalized.settings) {
-      const projectModes = normalized.data && Array.isArray(normalized.data.modes)
-        ? normalized.data.modes
-        : [];
-      const projectIonian = projectModes.find((mode) => mode.name === "Ionian") || projectModes[0];
-      if (normalized.settings.overviewMode === undefined) {
-        normalized.settings.overviewMode = legacyOverviewFocus && legacyOverviewFocus !== "all"
-          ? legacyOverviewFocus
-          : projectIonian ? projectIonian.id : defaultOverviewMode.id;
-      }
-      if (normalized.settings.overviewPosition === undefined) {
-        const legacyMode = legacyOverviewFocus && legacyOverviewFocus !== "all"
-          ? projectModes.find((mode) => mode.id === legacyOverviewFocus)
-          : null;
-        normalized.settings.overviewPosition = legacyMode ? legacyMode.position : "all";
-      }
-      delete normalized.settings.overviewFocus;
-      delete normalized.settings.overviewCharacteristic;
+
+    const projectModes = Array.isArray(normalized.data.modes) ? normalized.data.modes : [];
+    const legacyOverviewFocus = normalized.settings.overviewFocus;
+    const previousMode = normalized.settings.overviewMode !== undefined
+      ? normalized.settings.overviewMode
+      : legacyOverviewFocus;
+    const legacySpecificMode = projectModes.find((mode) => mode.id === previousMode);
+    const previousModeDefinition = projectModes.find((mode) => mode.id === previousMode
+      || modeKeyFor(mode) === String(previousMode || "").toLowerCase());
+    const referenceParentPitchClass = Number.isInteger(normalized.settings.overviewParentPitchClass)
+      ? normalized.settings.overviewParentPitchClass
+      : Number.isInteger(normalized.data.parentScale.tonicPitchClass)
+        ? normalized.data.parentScale.tonicPitchClass
+        : normalized.data.parentScale.pitchClasses[0];
+    const normalizedModeKey = genericModeKey(previousMode, projectModes);
+    const genericModeDefinition = projectModes.find((mode) => modeKeyFor(mode) === normalizedModeKey)
+      || projectModes[0];
+    const degreeIndex = genericModeDefinition && Number.isInteger(genericModeDefinition.degreeIndex)
+      ? genericModeDefinition.degreeIndex
+      : 0;
+
+    if (!Number.isInteger(normalized.settings.overviewTonicPitchClass)) {
+      normalized.settings.overviewTonicPitchClass = legacySpecificMode
+        ? legacySpecificMode.tonicPitchClass
+        : (referenceParentPitchClass + majorScaleOffsets[degreeIndex]) % 12;
     }
+    normalized.settings.overviewMode = normalizedModeKey;
+    if (normalized.settings.overviewPosition === undefined) {
+      normalized.settings.overviewPosition = previousModeDefinition && legacyOverviewFocus !== "all"
+        ? previousModeDefinition.position
+        : "all";
+    }
+    if (normalized.settings.overviewOverlay === undefined) {
+      normalized.settings.overviewOverlay = normalized.settings.overviewCharacteristic === false ? "none" : "characteristic";
+    }
+
+    delete normalized.settings.overviewFocus;
+    delete normalized.settings.overviewParentPitchClass;
+    delete normalized.settings.overviewCharacteristic;
+    delete normalized.settings.view;
+    delete normalized.settings.overlay;
+    delete normalized.settings.fretSpacing;
     return normalized;
   }
 
@@ -129,12 +160,12 @@
       throw new Error("This is not a version 1 guitar-diagram project.");
     }
     if (!Array.isArray(candidate.data.modes) || candidate.data.modes.length !== 7) {
-      throw new Error("The project must contain seven mode diagrams.");
+      throw new Error("The project must contain seven mode definitions.");
     }
-    const overviewModes = new Set(candidate.data.modes.map((mode) => mode.id));
-    if (!["full", "combined", "pentatonic"].includes(candidate.settings.view)
-      || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
-      || !["compact", "guitar", "wide"].includes(candidate.settings.fretSpacing)
+    const overviewModes = new Set(candidate.data.modes.map(modeKeyFor));
+    if (!Number.isInteger(candidate.settings.overviewTonicPitchClass)
+      || candidate.settings.overviewTonicPitchClass < 0
+      || candidate.settings.overviewTonicPitchClass > 11
       || !overviewModes.has(candidate.settings.overviewMode)
       || !["none", "pentatonic", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
@@ -145,6 +176,14 @@
     if (!candidate.data.pitchClassNames || !candidate.data.parentScale
       || !Array.isArray(candidate.data.parentScale.pitchClasses)) {
       throw new Error("The project is missing pitch-class or parent-scale data.");
+    }
+    if (!Array.isArray(candidate.data.majorKeys) || candidate.data.majorKeys.length !== 12
+      || new Set(candidate.data.majorKeys.map((key) => key && key.pitchClass)).size !== 12
+      || candidate.data.majorKeys.some((key) => !key || !Number.isInteger(key.pitchClass)
+        || key.pitchClass < 0 || key.pitchClass > 11 || typeof key.tonic !== "string"
+        || key.tonic.length === 0 || !Array.isArray(key.notes) || key.notes.length !== 7
+        || key.notes.some((note) => typeof note !== "string" || note.length === 0))) {
+      throw new Error("The project must define a valid spelling for all twelve parent major keys.");
     }
     if (!Array.isArray(candidate.data.positionFamilies) || candidate.data.positionFamilies.length !== 5) {
       throw new Error("The project must define five CAGED position families.");
@@ -176,6 +215,8 @@
     }
 
     const ids = new Set();
+    const modeKeys = new Set();
+    const degreeIndices = new Set();
     for (const [stringIndex, string] of candidate.data.strings.entries()) {
       if (!Number.isInteger(string.number) || string.number !== stringIndex + 1
         || !Number.isInteger(string.openPitchClass) || string.openPitchClass < 0 || string.openPitchClass > 11
@@ -211,10 +252,15 @@
       }
     }
     for (const mode of candidate.data.modes) {
+      const modeKey = modeKeyFor(mode);
       if (typeof mode.id !== "string" || !/^[a-z0-9-]+$/.test(mode.id) || ids.has(mode.id)) {
         throw new Error("Every mode needs a unique lowercase identifier.");
       }
+      if (!modeKey || modeKeys.has(modeKey)) {
+        throw new Error("Every mode needs a unique generic mode key.");
+      }
       ids.add(mode.id);
+      modeKeys.add(modeKey);
       for (const property of ["name", "tonic", "numeral", "pentatonicName"]) {
         if (typeof mode[property] !== "string" || mode[property].length === 0 || mode[property].length > 80) {
           throw new Error(`${mode.id} has an invalid ${property}.`);
@@ -222,10 +268,13 @@
       }
       if (!/^#[0-9a-f]{6}$/i.test(mode.accent)) throw new Error(`${mode.id} has an invalid accent color.`);
       if (!Number.isInteger(mode.tonicPitchClass) || mode.tonicPitchClass < 0 || mode.tonicPitchClass > 11
+        || !Number.isInteger(mode.degreeIndex) || mode.degreeIndex < 0 || mode.degreeIndex > 6
+        || degreeIndices.has(mode.degreeIndex)
         || !Number.isInteger(mode.position) || !mode.anchor
         || !Number.isInteger(mode.anchor.string) || !Number.isInteger(mode.anchor.fret)) {
         throw new Error(`${mode.id} has invalid tonic, position, or anchor data.`);
       }
+      degreeIndices.add(mode.degreeIndex);
       if (!Array.isArray(mode.tones) || mode.tones.length !== 7
         || mode.tones.filter((tone) => tone && tone.core === true).length !== 5
         || mode.tones.some((tone) => !tone || !Number.isInteger(tone.semitones)
@@ -251,6 +300,9 @@
         throw new Error(`${mode.id} has invalid per-string fret selections.`);
       }
     }
+    if (degreeIndices.size !== 7) {
+      throw new Error("The seven mode definitions must cover each relative degree exactly once.");
+    }
     const modePositions = new Set(candidate.data.modes.map((mode) => mode.position));
     if (modePositions.size !== familyPositions.size
       || [...modePositions].some((position) => !familyPositions.has(position))) {
@@ -259,14 +311,16 @@
   }
 
   function preflightProject(candidate) {
+    renderer.deriveOverviewContext(candidate.data, {
+      tonicPitchClass: candidate.settings.overviewTonicPitchClass,
+      mode: candidate.settings.overviewMode
+    });
     renderer.renderOverviewSvg(candidate.data, {
+      tonicPitchClass: candidate.settings.overviewTonicPitchClass,
       mode: candidate.settings.overviewMode,
       position: candidate.settings.overviewPosition,
       overlay: candidate.settings.overviewOverlay
     });
-    for (const mode of candidate.data.modes) {
-      renderer.renderModeSvg(candidate.data, mode, candidate.settings);
-    }
   }
 
   function saveProject(message) {
@@ -279,66 +333,107 @@
     if (message) status.textContent = message;
   }
 
+  function pitchClassName(data, pitchClass) {
+    const normalizedPitchClass = ((Number(pitchClass) % 12) + 12) % 12;
+    return data.pitchClassNames[normalizedPitchClass] || String(normalizedPitchClass);
+  }
+
+  function contextParentName(context, data, pitchClass) {
+    if (typeof context.parentKey === "string") return context.parentKey;
+    if (context.parentKey && typeof context.parentKey === "object") {
+      return context.parentKey.name || context.parentKey.tonic || context.parentKey.label
+        || pitchClassName(data, pitchClass);
+    }
+    return pitchClassName(data, pitchClass);
+  }
+
+  function contextModeName(context, fallbackMode) {
+    return context.selectedMode && context.selectedMode.name
+      ? context.selectedMode.name
+      : fallbackMode.name;
+  }
+
+  function contextTonicName(context, fallbackMode) {
+    return context.selectedMode && (context.selectedMode.tonic || context.selectedMode.tonicName
+      || context.selectedMode.root)
+      || context.selectedTonic || context.selectedTonicName || context.tonicName || fallbackMode.tonic;
+  }
+
+  function currentOverviewContext(mode = project.settings.overviewMode) {
+    return renderer.deriveOverviewContext(project.data, {
+      tonicPitchClass: project.settings.overviewTonicPitchClass,
+      mode
+    });
+  }
+
+  function populateTonicOptions() {
+    overviewTonicControl.innerHTML = Array.from({ length: 12 }, (_, pitchClass) => {
+      let label = pitchClassName(project.data, pitchClass);
+      try {
+        const context = renderer.deriveOverviewContext(project.data, {
+          tonicPitchClass: pitchClass,
+          mode: project.settings.overviewMode
+        });
+        label = contextTonicName(context, project.data.modes[0]);
+      } catch (error) {
+        // The project validator reports an invalid context; keep the pitch-class fallback usable here.
+      }
+      return `<option value="${pitchClass}">${escapeHtml(label)}</option>`;
+    }).join("");
+    overviewTonicControl.value = String(project.settings.overviewTonicPitchClass);
+  }
+
+  function populateModeOptions() {
+    overviewModeControl.innerHTML = project.data.modes.map((mode) => {
+      const key = modeKeyFor(mode);
+      return `<option value="${escapeHtml(key)}">${escapeHtml(mode.name)}</option>`;
+    }).join("");
+    overviewModeControl.value = project.settings.overviewMode;
+  }
+
   function populateOverviewOptions() {
-    overviewModeControl.innerHTML = project.data.modes
-      .map((mode) => `<option value="${escapeHtml(mode.id)}">${escapeHtml(mode.name)} · ${escapeHtml(mode.tonic)} tonic</option>`)
-      .join("");
+    populateModeOptions();
+    populateTonicOptions();
     const families = [...project.data.positionFamilies].sort((a, b) => a.position - b.position);
-    overviewPositionControl.innerHTML = `<option value="all">All 5 positions</option>`
+    overviewPositionControl.innerHTML = `<option value="all">All 5 CAGED regions</option>`
       + families.map((family) => `<option value="${family.position}">P${family.position} · ${escapeHtml(family.cagedForm)}-form</option>`).join("");
   }
 
   function applyControls() {
-    document.querySelector(`input[name="view"][value="${project.settings.view}"]`).checked = true;
-    overlayControl.value = project.settings.overlay;
-    fretSpacingControl.value = project.settings.fretSpacing;
+    overviewTonicControl.value = String(project.settings.overviewTonicPitchClass);
     overviewModeControl.value = project.settings.overviewMode;
     overviewPositionControl.value = String(project.settings.overviewPosition);
     overviewOverlayControl.value = project.settings.overviewOverlay;
   }
 
-  function renderLegend() {
-    const markers = project.settings.view === "full"
-      ? [{ kind: "filled", label: "Mode note" }]
-      : project.settings.view === "pentatonic"
-        ? [{ kind: "filled", label: "Pentatonic note" }]
-        : [
-          { kind: "filled", label: "Pentatonic core" },
-          { kind: "hollow", label: "Modal color tone outside the core" }
-        ];
-    markers.push({ kind: "root", label: "Tonic" });
-
-    const overlayLabels = {
-      characteristic: "Selected characteristic tone(s)",
-      triad: "Selected tonic-triad tones",
-      seventh: "Selected tonic-seventh tones"
-    };
-    if (project.settings.overlay !== "none") {
-      markers.push({ kind: "highlight", label: overlayLabels[project.settings.overlay] });
-    }
-
-    const explanation = project.settings.view === "full"
-      ? "All seven mode notes are shown equally."
-      : project.settings.view === "pentatonic"
-        ? "Only the five-note pentatonic core is shown; an active highlight may name tones hidden from this view."
-        : "Filled notes form the pentatonic core. Hollow notes are full-mode color tones, not lesser or avoid notes.";
-    const overlayNotes = {
-      none: "",
-      characteristic: " Characteristic tones give the mode its clearest color; the thick amber edge does not change scale membership.",
-      triad: " A tonic triad is built by taking every other mode degree from home: 1, 3 and 5. The actual ♭3 or ♭5 determines its chord quality.",
-      seventh: " A tonic seventh chord extends the tonic triad by adding the mode's seventh degree: 1, 3, 5 and 7."
-    };
-
-    legendRoot.innerHTML = markers.map((marker) => `<span><i class="legend-marker ${marker.kind}" aria-hidden="true"></i>${marker.label}</span>`).join("")
-      + `<p>${explanation}${overlayNotes[project.settings.overlay]}</p>`;
+  function renderSelectionSummary(context) {
+    const selectedDefinition = project.data.modes.find((mode) => modeKeyFor(mode) === project.settings.overviewMode)
+      || project.data.modes[0];
+    const parentName = contextParentName(context, project.data, project.settings.overviewTonicPitchClass);
+    const modeName = contextModeName(context, selectedDefinition);
+    const tonicName = contextTonicName(context, selectedDefinition);
+    const family = project.settings.overviewPosition === "all"
+      ? null
+      : project.data.positionFamilies.find((candidate) => candidate.position === project.settings.overviewPosition);
+    const positionText = family
+      ? `P${family.position} ${family.cagedForm}-form region`
+      : "all five CAGED regions";
+    const tonicLocation = Number.isInteger(context.selectedAnchorFret)
+      ? ` · modal tonic on low-E fret ${context.selectedAnchorFret}`
+      : "";
+    overviewSelectionSummary.textContent = `${tonicName} ${modeName} · relative parent ${parentName} major${tonicLocation} · ${positionText}.`;
   }
 
   function renderOverview() {
-    overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, {
+    const options = {
+      tonicPitchClass: project.settings.overviewTonicPitchClass,
       mode: project.settings.overviewMode,
       position: project.settings.overviewPosition,
       overlay: project.settings.overviewOverlay
-    });
+    };
+    const context = renderer.deriveOverviewContext(project.data, options);
+    overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, options);
+    renderSelectionSummary(context);
   }
 
   function renderTheoryReference() {
@@ -349,7 +444,12 @@
       const formula = mode.tones.map((tone) => renderer.prettyDegree(tone.degree)).join(" ");
       const identity = mode.characteristicDegrees.map(renderer.prettyDegree).join(" + ");
       const additions = mode.tones.filter((tone) => !tone.core).map((tone) => renderer.prettyDegree(tone.degree)).join(" + ");
-      const coreName = mode.pentatonicNote ? "Project subset" : renderer.pentatonicDisplayName(mode);
+      const coreFormula = mode.tones.filter((tone) => tone.core).map((tone) => tone.degree).join(" ");
+      const coreName = coreFormula === "1 2 3 5 6"
+        ? "Major pentatonic"
+        : coreFormula === "1 b3 4 5 b7"
+          ? "Minor pentatonic"
+          : "Project subset";
       return `<tr>
         <td>${escapeHtml(mode.numeral)}</td>
         <th scope="row">${escapeHtml(mode.name)}</th>
@@ -363,24 +463,7 @@
 
   function render() {
     renderOverview();
-    renderLegend();
     renderTheoryReference();
-    diagramsRoot.innerHTML = project.data.modes.map((mode) => {
-      const svg = renderer.renderModeSvg(project.data, mode, project.settings);
-      const modeId = escapeHtml(mode.id);
-      const modeTitle = mode.name;
-      const accessibleModeTitle = `${mode.tonic} ${mode.name}`;
-      return `<article class="diagram-card print-card" data-mode-id="${modeId}">
-        <div class="diagram-heading">
-          <div><h2>${escapeHtml(modeTitle)}</h2><p>Tonic-start reference shape · root on string ${escapeHtml(mode.anchor.string)}, fret ${escapeHtml(mode.anchor.fret)}</p></div>
-          <div class="diagram-actions">
-            <button type="button" data-action="export" data-mode-id="${modeId}" aria-label="Export ${escapeHtml(accessibleModeTitle)} SVG">Export SVG</button>
-            <button type="button" data-action="print" data-mode-id="${modeId}" aria-label="Print ${escapeHtml(accessibleModeTitle)} box">Print this box</button>
-          </div>
-        </div>
-        <div class="svg-frame">${svg}</div>
-      </article>`;
-    }).join("");
   }
 
   function downloadBlob(content, type, filename) {
@@ -394,22 +477,16 @@
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  function exportSvg(modeId) {
-    const mode = project.data.modes.find((candidate) => candidate.id === modeId);
-    const markup = renderer.renderModeSvg(project.data, mode, project.settings);
-    const filename = `${renderer.exportFileStem(mode, project.settings.view, project.settings.overlay, project.settings.fretSpacing)}.svg`;
-    downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);
-    status.textContent = `Exported ${mode.name} as ${filename}.`;
-  }
-
   function exportOverview() {
     const markup = renderer.renderOverviewSvg(project.data, {
+      tonicPitchClass: project.settings.overviewTonicPitchClass,
       mode: project.settings.overviewMode,
       position: project.settings.overviewPosition,
       overlay: project.settings.overviewOverlay
     });
     const filename = `${renderer.overviewFileStem(
       project.data,
+      project.settings.overviewTonicPitchClass,
       project.settings.overviewMode,
       project.settings.overviewPosition,
       project.settings.overviewOverlay
@@ -421,13 +498,6 @@
   function clearPrintTarget() {
     document.body.classList.remove("print-single");
     document.querySelectorAll(".is-print-target").forEach((element) => element.classList.remove("is-print-target"));
-  }
-
-  function printOne(modeId) {
-    clearPrintTarget();
-    document.body.classList.add("print-single");
-    document.querySelector(`[data-mode-id="${modeId}"].diagram-card`).classList.add("is-print-target");
-    window.print();
   }
 
   function printOverview() {
@@ -459,8 +529,15 @@
     }
   }
 
+  overviewTonicControl.addEventListener("change", (event) => {
+    project.settings.overviewTonicPitchClass = Number(event.target.value);
+    saveProject();
+    renderOverview();
+  });
+
   overviewModeControl.addEventListener("change", (event) => {
     project.settings.overviewMode = event.target.value;
+    populateTonicOptions();
     saveProject();
     renderOverview();
   });
@@ -484,40 +561,8 @@
     window.print();
   });
 
-  document.querySelectorAll('input[name="view"]').forEach((control) => {
-    control.addEventListener("change", (event) => {
-      project.settings.view = event.target.value;
-      saveProject();
-      render();
-    });
-  });
-
-  overlayControl.addEventListener("change", (event) => {
-    project.settings.overlay = event.target.value;
-    saveProject();
-    render();
-  });
-
-  fretSpacingControl.addEventListener("change", (event) => {
-    project.settings.fretSpacing = event.target.value;
-    saveProject();
-    render();
-  });
-
-  diagramsRoot.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-action]");
-    if (!button) return;
-    if (button.dataset.action === "export") exportSvg(button.dataset.modeId);
-    if (button.dataset.action === "print") printOne(button.dataset.modeId);
-  });
-
-  document.getElementById("print-all").addEventListener("click", () => {
-    clearPrintTarget();
-    window.print();
-  });
-
   document.getElementById("download-project").addEventListener("click", () => {
-    downloadBlob(`${JSON.stringify(project, null, 2)}\n`, "application/json;charset=utf-8", "relative-mode-boxes.json");
+    downloadBlob(`${JSON.stringify(project, null, 2)}\n`, "application/json;charset=utf-8", "connected-mode-fretboard.json");
     status.textContent = "Downloaded the editable project JSON.";
   });
 

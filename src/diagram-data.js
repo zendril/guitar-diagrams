@@ -9,13 +9,27 @@
 
   return {
     schemaVersion: 1,
-    sourceRevision: 5,
+    sourceRevision: 6,
     title: "Relative modes of the major scale",
     parentScale: {
       tonic: "G",
       pitchClasses: [7, 9, 11, 0, 2, 4, 6],
       notes: ["G", "A", "B", "C", "D", "E", "F♯"]
     },
+    majorKeys: [
+      { pitchClass: 0, tonic: "C", notes: ["C", "D", "E", "F", "G", "A", "B"] },
+      { pitchClass: 1, tonic: "D♭", notes: ["D♭", "E♭", "F", "G♭", "A♭", "B♭", "C"] },
+      { pitchClass: 2, tonic: "D", notes: ["D", "E", "F♯", "G", "A", "B", "C♯"] },
+      { pitchClass: 3, tonic: "E♭", notes: ["E♭", "F", "G", "A♭", "B♭", "C", "D"] },
+      { pitchClass: 4, tonic: "E", notes: ["E", "F♯", "G♯", "A", "B", "C♯", "D♯"] },
+      { pitchClass: 5, tonic: "F", notes: ["F", "G", "A", "B♭", "C", "D", "E"] },
+      { pitchClass: 6, tonic: "F♯", notes: ["F♯", "G♯", "A♯", "B", "C♯", "D♯", "E♯"] },
+      { pitchClass: 7, tonic: "G", notes: ["G", "A", "B", "C", "D", "E", "F♯"] },
+      { pitchClass: 8, tonic: "A♭", notes: ["A♭", "B♭", "C", "D♭", "E♭", "F", "G"] },
+      { pitchClass: 9, tonic: "A", notes: ["A", "B", "C♯", "D", "E", "F♯", "G♯"] },
+      { pitchClass: 10, tonic: "B♭", notes: ["B♭", "C", "D", "E♭", "F", "G", "A"] },
+      { pitchClass: 11, tonic: "B", notes: ["B", "C♯", "D♯", "E", "F♯", "G♯", "A♯"] }
+    ],
     strings: [
       { number: 1, name: "e", openPitchClass: 4 },
       { number: 2, name: "B", openPitchClass: 11 },
@@ -78,6 +92,8 @@
     modes: [
       {
         id: "g-ionian",
+        key: "ionian",
+        degreeIndex: 0,
         numeral: "I",
         tonic: "G",
         tonicPitchClass: 7,
@@ -93,6 +109,8 @@
       },
       {
         id: "a-dorian",
+        key: "dorian",
+        degreeIndex: 1,
         numeral: "ii",
         tonic: "A",
         tonicPitchClass: 9,
@@ -108,6 +126,8 @@
       },
       {
         id: "b-phrygian",
+        key: "phrygian",
+        degreeIndex: 2,
         numeral: "iii",
         tonic: "B",
         tonicPitchClass: 11,
@@ -123,6 +143,8 @@
       },
       {
         id: "c-lydian",
+        key: "lydian",
+        degreeIndex: 3,
         numeral: "IV",
         tonic: "C",
         tonicPitchClass: 0,
@@ -138,6 +160,8 @@
       },
       {
         id: "d-mixolydian",
+        key: "mixolydian",
+        degreeIndex: 4,
         numeral: "V",
         tonic: "D",
         tonicPitchClass: 2,
@@ -153,6 +177,8 @@
       },
       {
         id: "e-aeolian",
+        key: "aeolian",
+        degreeIndex: 5,
         numeral: "vi",
         tonic: "E",
         tonicPitchClass: 4,
@@ -168,6 +194,8 @@
       },
       {
         id: "fs-locrian",
+        key: "locrian",
+        degreeIndex: 6,
         numeral: "vii°",
         tonic: "F♯",
         tonicPitchClass: 6,

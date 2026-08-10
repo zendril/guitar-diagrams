@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Relative Modes of the Major Scale</title>
-  <link rel="stylesheet" href="src/styles.css?v=5">
+  <link rel="stylesheet" href="src/styles.css?v=6">
 </head>
 <body>
   <nav class="page-nav" aria-label="Primary">
@@ -18,25 +18,29 @@
         <div>
           <p class="eyebrow">Editable guitar-learning diagrams</p>
           <h1 id="diagram-page-title" data-page-heading tabindex="-1">Relative modes of the major scale</h1>
-          <p class="lede">Seven individual tonic-start reference shapes plus one connected map with independent mode and CAGED-position controls.</p>
+          <p class="lede">One connected fretboard: choose a tonic, a mode formula, a CAGED region, and what to highlight.</p>
         </div>
       </header>
 
       <section id="overview" class="overview-card print-card" aria-labelledby="overview-heading">
         <div class="overview-heading">
           <div class="overview-copy">
-            <h2 id="overview-heading">Connected positions</h2>
-            <p>Choose a mode to keep its tonic and interval labels fixed, then view it in any CAGED position—or across all five. Compare its pentatonic core, characteristic tones, tonic chords, and the parent-major CAGED voicing.</p>
+            <h2 id="overview-heading">Connected fretboard</h2>
+            <p>Choose the sound directly, then see its relative parent scale, seven modal roots, and five overlapping CAGED chord regions.</p>
           </div>
-          <div class="overview-controls">
+          <div class="overview-control-grid">
+            <label class="select-control" for="overview-tonic">
+              Tonic / starting note
+              <select id="overview-tonic"></select>
+            </label>
             <label class="select-control" for="overview-mode">
-              Mode / tonic
+              Mode formula
               <select id="overview-mode"></select>
             </label>
             <label class="select-control" for="overview-position">
-              Position focus
+              CAGED position focus
               <select id="overview-position">
-                <option value="all">All 5 positions</option>
+                <option value="all">All 5 CAGED regions</option>
               </select>
             </label>
             <label class="select-control" for="overview-overlay">
@@ -50,52 +54,25 @@
                 <option value="none">None</option>
               </select>
             </label>
-            <button type="button" id="export-overview">Export overview SVG</button>
-            <button type="button" id="print-overview">Print overview</button>
+          </div>
+          <p class="overview-control-help">The tonic chooses home. The mode sets its interval formula and relative parent scale. The CAGED position changes only the physical neck region.</p>
+          <p id="overview-selection-summary" class="overview-selection-summary" aria-live="polite"></p>
+          <div class="overview-actions no-print">
+            <button type="button" id="export-overview">Export SVG</button>
+            <button type="button" id="print-overview" class="primary-action">Print / save PDF</button>
+            <details class="project-actions">
+              <summary>Project data</summary>
+              <div>
+                <button type="button" id="download-project">Download JSON</button>
+                <button type="button" id="import-project-button">Import JSON</button>
+                <input id="import-project" type="file" accept="application/json,.json" hidden>
+              </div>
+            </details>
           </div>
         </div>
         <div id="overview-frame" class="overview-frame"></div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
       </section>
-
-      <section class="toolbar" aria-label="Individual diagram controls">
-        <fieldset>
-          <legend>Individual reference boxes — notes shown</legend>
-          <label><input type="radio" name="view" value="full"> Full scale — equal</label>
-          <label><input type="radio" name="view" value="combined" checked> Full scale — pentatonic emphasized</label>
-          <label><input type="radio" name="view" value="pentatonic"> Pentatonic only</label>
-        </fieldset>
-
-        <label class="select-control" for="fret-spacing">
-          Fret spacing
-          <select id="fret-spacing">
-            <option value="compact" selected>Compact — equal frets</option>
-            <option value="guitar">Guitar-like — tapered frets</option>
-            <option value="wide">Wide — fill card</option>
-          </select>
-        </label>
-
-        <label class="select-control" for="overlay">
-          Learning highlight
-          <select id="overlay">
-            <option value="none">None</option>
-            <option value="characteristic">Characteristic tone(s)</option>
-            <option value="triad">Tonic triad</option>
-            <option value="seventh">Tonic seventh chord</option>
-          </select>
-        </label>
-
-        <div class="toolbar-actions">
-          <button type="button" id="download-project">Download project JSON</button>
-          <button type="button" id="import-project-button">Import project JSON</button>
-          <input id="import-project" type="file" accept="application/json,.json" hidden>
-          <button type="button" id="print-all" class="primary-action">Print all / save PDF</button>
-        </div>
-      </section>
-
-      <section id="legend" class="legend" aria-label="Marker legend"></section>
-
-      <div id="diagrams" class="diagram-list"></div>
-      <p id="status" class="status" role="status" aria-live="polite"></p>
     </section>
 
     <section id="cheat-sheet" class="page-view" data-page-view="cheat-sheet" aria-labelledby="cheat-sheet-title" hidden>
@@ -134,7 +111,7 @@
               <h2 id="caged-heading">How CAGED fits</h2>
               <p>CAGED is five overlapping fretboard regions derived from movable <strong>C, A, G, E, and D chord forms</strong>. Each form gives you roots, thirds, and fifths for the chord you choose to map. Add scale notes around that chord skeleton.</p>
               <p>A CAGED letter names the underlying chord form—not the key, mode, or first note. Every mode can be played in every usable CAGED region.</p>
-              <p>In the connected overview, P1–P5 are named for the <strong>parent-major chord form</strong>. Mode and position are independent: changing position moves the same tonic and interval formula to another physical region.</p>
+              <p>The selected tonic and mode formula derive the relative parent major scale. In the connected overview, P1–P5 name its five <strong>parent-major CAGED regions</strong>. The separate I–vii landmarks name the seven relative modal roots. These systems overlap, but their numbers do not correspond one-to-one.</p>
 
               <div class="table-wrap">
                 <table class="cheat-table system-table">
@@ -153,13 +130,13 @@
             </section>
 
             <section class="cheat-block" aria-labelledby="current-map-heading">
-              <h2 id="current-map-heading">CAGED forms on this map</h2>
-              <p>Moving upward through the current fret range, the parent-major chord forms are:</p>
+              <h2 id="current-map-heading">Two maps on one neck</h2>
+              <p>Moving upward through the displayed fret range, the parent-major chord forms are:</p>
               <ol id="caged-reference" class="caged-strip" aria-label="Position family to CAGED form mapping"></ol>
               <p>Choose <strong>Parent-major CAGED chord</strong> to highlight the reference voicing in the selected position—or all five voicings when all positions are shown. Teal chord notes use parent-major degrees <code>1 3 5</code>; every other note remains labeled from the selected modal tonic. The highlighted chord is the parent-major I chord, not necessarily the mode's tonic chord.</p>
               <p>Choose <strong>Tonic triad</strong> to highlight every tonic-triad target inside the selected position, or across the displayed fretboard when all positions are shown. In A Dorian this means A–C–E (<code>1 ♭3 5</code>), not the G–B–D parent-major D-form. <strong>Tonic seventh chord</strong> adds the mode's seventh; its outlined marker makes “triad plus seventh” visible. Both are chord-tone maps, not one specific guitar voicing.</p>
               <p>The connected map's learning selector controls its own note display: characteristic tones and tonic chords use the selected mode's complete seven-note scale with the pentatonic core emphasized. <strong>Pentatonic only — across neck</strong> instead shows every occurrence of that five-note core and hides the other two mode tones. Position contours stay visible as location guides; they are not pentatonic-box boundaries.</p>
-              <p class="fine-print">P1–P5 are local labels for this project. Pentatonic “box numbers” may differ in another book.</p>
+              <p class="fine-print">The seven I–vii modal landmarks identify possible tonics; P1–P5 identify CAGED regions. Pentatonic “box numbers” may differ in another book.</p>
             </section>
 
             <section class="cheat-block" aria-labelledby="tonic-chord-heading">
@@ -257,8 +234,8 @@
     </section>
   </main>
 
-  <script src="src/diagram-data.js?v=5"></script>
-  <script src="src/render.js?v=5"></script>
-  <script src="src/app.js?v=5"></script>
+  <script src="src/diagram-data.js?v=6"></script>
+  <script src="src/render.js?v=6"></script>
+  <script src="src/app.js?v=6"></script>
 </body>
 </html>
