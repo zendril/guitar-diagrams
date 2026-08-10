@@ -10,9 +10,9 @@ Open `index.html` directly in a browser. No installation or build step is requir
 
 The editor provides:
 
-- a connected-position overview with five overlapping physical contours and all seven modal root anchors;
-- a mode-focus control that relabels the shared fretboard from the selected tonic and shows its interval formula;
-- a focused-position learning highlight that switches among an across-neck pentatonic-only map, characteristic tones, modal tonic-triad and tonic-seventh targets, and parent-major CAGED chord tones;
+- a connected-position overview with five overlapping, mode-neutral CAGED position families;
+- independent tonic/mode and position-focus controls: the tonic sets the interval labels while P1–P5 select only the physical fretboard region;
+- a learning highlight that switches among an across-neck pentatonic-only map, characteristic tones, modal tonic-triad and tonic-seventh targets, and parent-major CAGED chord tones;
 - one separate diagram for each mode;
 - a full-scale view with all seven notes shown equally;
 - a full-scale view with the pentatonic core emphasized;
@@ -45,10 +45,11 @@ npm test
 - Hollow marker: full-mode color tone outside the five-note core.
 - Colored outer ring: tonic.
 - Thick amber marker edge: note selected by the active learning highlight.
-- Violet overview marker: modal tonic-triad target inside the focused contour.
+- Violet overview marker: modal tonic-triad target inside the selected position scope.
 - Violet overview marker with a violet-outlined seventh: modal tonic-seventh target, shown as the tonic triad plus its added seventh.
-- Teal overview marker: note in the selected parent-major CAGED reference voicing.
-- Stepped contour: derived from the notes shown on each string.
+- Teal overview marker: note in a parent-major CAGED reference voicing within the selected position scope.
+- Position-colored stepped contour in the overview: one physical CAGED position family; its color stays fixed when the tonic or mode changes.
+- Colored stepped contour in an individual diagram: derived from the notes shown on each string in that tonic-start reference shape.
 
 The individual diagrams default to a centered compact fretboard so the pattern is easier to read without shrinking note markers or string spacing. “Guitar-like” keeps that compact footprint but tapers consecutive fret widths by the physical 12-tone equal-temperament ratio. “Wide” preserves the original equal-fret, full-card layout for comparison. These spacing choices change only the drawing geometry, never the notes or intervals.
 
@@ -60,11 +61,13 @@ The characteristic-tone highlight uses `4 + 7` for Ionian, `6` for Dorian, `♭2
 
 A tonic triad is built by taking every other note from the tonic: scale degrees `1–3–5`. Ionian, Lydian, and Mixolydian have a major tonic triad (`1 3 5`); Dorian, Phrygian, and Aeolian have a minor tonic triad (`1 ♭3 5`); Locrian has a diminished tonic triad (`1 ♭3 ♭5`). These are useful resolution targets inside each box.
 
-The overview intentionally shows five broad position families rather than pretending the seven modes occupy seven unrelated regions. Ionian/Locrian share position family 1, and Phrygian/Lydian share position family 3; choosing either mode reveals its exact low-E boundary while the other position families remain visible as context.
+The connected overview deliberately separates two choices that are often conflated. **Tonic / mode** determines which pitch is heard as `1`, how every interval is labeled, the mode formula, its characteristic tones, and its tonic chord. **Position focus** determines only where on the neck to concentrate: `P1 E-form`, `P2 D-form`, `P3 C-form`, `P4 A-form`, `P5 G-form`, or all five. The default is **Ionian + All 5 positions**.
 
-When a mode is focused, the connected overview shows the mode formula and the selected learning highlight's chord quality and interval formula. Its note scope is self-contained: characteristic tones, tonic chords, CAGED, and no highlight use the complete seven-note contour with the five-note core emphasized. The lower “Individual boxes — notes shown” controls affect only the breakout diagrams.
+“All 5 positions” means the five overlapping CAGED-derived regions across the displayed fret range, not all seven modes and not every fret on the guitar. Each family keeps a stable position color that does not belong to any mode. For example, choosing **Ionian + P2 D-form** shows G Ionian in the second physical region: G remains `1`, and selecting P2 does not turn the music into A Dorian. The dimmer neighboring regions remain visible so the connections between positions are easy to see.
 
-The overview's **Pentatonic only — across neck** focus is broader than an individual box: it shows every occurrence of the selected five-note pitch-class set from fret 2 through fret 15 and hides the two non-core mode tones. The full-position contours remain as navigation guides, not pentatonic-box boundaries. Some relative modes intentionally produce the same physical dot map with different tonic rings and interval labels: Ionian/Aeolian, Dorian/Lydian, and Phrygian/Mixolydian. Locrian instead uses the project's explicitly nonstandard Locrian-compatible subset described above.
+Characteristic-tone and modal tonic-chord highlights use the selected tonic/mode and the selected position scope. With **All 5 positions**, their targets are shown across the displayed fretboard. With one P-position selected, targets in that family are emphasized while the other families remain context. The lower **Individual boxes — notes shown** controls affect only the breakout diagrams.
+
+The overview's **Pentatonic only — across neck** focus is broader than an individual box: it shows every occurrence of the selected five-note pitch-class set from fret 2 through fret 15 and hides the two non-core mode tones. A selected P-position remains outlined only as a navigation guide; it does not limit the pentatonic note scope. The position-family contours are not pentatonic-box boundaries. Some relative modes intentionally produce the same physical dot map with different tonic rings and interval labels: Ionian/Aeolian, Dorian/Lydian, and Phrygian/Mixolydian. Locrian instead uses the project's explicitly nonstandard Locrian-compatible subset described above.
 
 ## How CAGED relates to the modal boxes
 
@@ -72,6 +75,6 @@ CAGED and modes describe different dimensions. CAGED is a physical, chord-based 
 
 For this map, moving upward through the displayed fret range gives position family 1 through 5 as `E-form → D-form → C-form → A-form → G-form`. These are CAGED-aligned parent-major regions, not universal scale-box definitions. Five common pentatonic shapes often align with those regions, but box numbering varies between teaching systems.
 
-The connected overview can highlight one parent-major reference voicing for the focused family: E-form `3–5–5–4–3–3`, D-form `x–x–5–7–8–7`, C-form `x–10–9–7–8–7`, A-form `x–10–12–12–12–10`, and G-form `15–14–12–12–12–15` (written low string to high string, with `x` for a muted string). The complete G- and C-form grips are often played as smaller fragments; the diagram shows their full chord-tone skeleton. In this overlay, the teal chord notes use parent-major degrees `1–3–5`; all other notes keep the selected mode's interval labels. This makes both reference frames visible without implying that the parent-major chord is every mode's tonic chord.
+The connected overview can highlight the parent-major reference voicing for the selected position: E-form `3–5–5–4–3–3`, D-form `x–x–5–7–8–7`, C-form `x–10–9–7–8–7`, A-form `x–10–12–12–12–10`, and G-form `15–14–12–12–12–15` (written low string to high string, with `x` for a muted string). With **All 5 positions**, all five reference voicings are available across the map. The complete G- and C-form grips are often played as smaller fragments; the diagram shows their full chord-tone skeleton. In this overlay, the teal chord notes use parent-major degrees `1–3–5`; all other notes keep the selected mode's interval labels. This makes both reference frames visible without implying that the parent-major chord is every mode's tonic chord.
 
-The modal tonic-chord overview is intentionally different: it highlights every tonic-triad pitch location inside the selected modal contour rather than one guitar voicing. For example, the parent-major CAGED overlay shows a G-major D-form voicing in the A Dorian region, while the modal tonic overlay shows the A-minor tones `A–C–E` as Dorian degrees `1–♭3–5` throughout that contour.
+The modal tonic-chord overview is intentionally different: it highlights tonic-triad pitch locations throughout the selected position scope rather than one guitar voicing. For example, with **A Dorian + P2 D-form**, the parent-major CAGED overlay shows a G-major D-form voicing, while the modal tonic overlay shows the A-minor tones `A–C–E` as Dorian degrees `1–♭3–5` throughout P2. The physical position is the same; only the harmonic reference changes.

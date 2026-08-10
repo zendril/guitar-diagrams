@@ -24,9 +24,13 @@ for (const target of targets) {
 
 const overviewDirectory = path.join(root, "exports", "overview");
 fs.mkdirSync(overviewDirectory, { recursive: true });
-const overviewMarkup = renderer.renderOverviewSvg(data, { focusMode: "all", overlay: "none", view: "full" });
+const overviewMarkup = renderer.renderOverviewSvg(data, {
+  mode: "g-ionian",
+  position: "all",
+  overlay: "none"
+});
 fs.writeFileSync(
-  path.join(overviewDirectory, `${renderer.overviewFileStem(data, "all")}.svg`),
+  path.join(overviewDirectory, "relative-mode-box-overview.svg"),
   `<?xml version="1.0" encoding="UTF-8"?>\n${overviewMarkup}\n`,
   "utf8"
 );

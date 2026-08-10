@@ -9,7 +9,7 @@
 
   return {
     schemaVersion: 1,
-    sourceRevision: 4,
+    sourceRevision: 5,
     title: "Relative modes of the major scale",
     parentScale: {
       tonic: "G",
@@ -39,11 +39,41 @@
       11: "B"
     },
     positionFamilies: [
-      { position: 1, cagedForm: "E", chordFretsByString: [[3], [3], [4], [5], [5], [3]] },
-      { position: 2, cagedForm: "D", chordFretsByString: [[7], [8], [7], [5], [], []] },
-      { position: 3, cagedForm: "C", chordFretsByString: [[7], [8], [7], [9], [10], []] },
-      { position: 4, cagedForm: "A", chordFretsByString: [[10], [12], [12], [12], [10], []] },
-      { position: 5, cagedForm: "G", chordFretsByString: [[15], [12], [12], [12], [14], [15]] }
+      {
+        position: 1,
+        cagedForm: "E",
+        accent: "#2563eb",
+        scaleFretsByString: [[2, 3, 5], [3, 5], [2, 4, 5], [2, 4, 5], [2, 3, 5], [3, 5]],
+        chordFretsByString: [[3], [3], [4], [5], [5], [3]]
+      },
+      {
+        position: 2,
+        cagedForm: "D",
+        accent: "#7c3aed",
+        scaleFretsByString: [[5, 7, 8], [5, 7, 8], [4, 5, 7], [4, 5, 7], [5, 7], [5, 7, 8]],
+        chordFretsByString: [[7], [8], [7], [5], [], []]
+      },
+      {
+        position: 3,
+        cagedForm: "C",
+        accent: "#059669",
+        scaleFretsByString: [[7, 8, 10], [7, 8, 10], [7, 9], [7, 9, 10], [7, 9, 10], [7, 8, 10]],
+        chordFretsByString: [[7], [8], [7], [9], [10], []]
+      },
+      {
+        position: 4,
+        cagedForm: "A",
+        accent: "#92400e",
+        scaleFretsByString: [[10, 12], [10, 12, 13], [9, 11, 12], [9, 10, 12], [9, 10, 12], [10, 12]],
+        chordFretsByString: [[10], [12], [12], [12], [10], []]
+      },
+      {
+        position: 5,
+        cagedForm: "G",
+        accent: "#dc2626",
+        scaleFretsByString: [[12, 14, 15], [12, 13, 15], [11, 12, 14], [12, 14], [12, 14, 15], [12, 14, 15]],
+        chordFretsByString: [[15], [12], [12], [12], [14], [15]]
+      }
     ],
     modes: [
       {

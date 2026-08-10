@@ -4,7 +4,8 @@
   const defaultData = window.GuitarDiagramData;
   const renderer = window.GuitarDiagramRenderer;
   const overviewFrame = document.getElementById("overview-frame");
-  const overviewFocusControl = document.getElementById("overview-focus");
+  const overviewModeControl = document.getElementById("overview-mode");
+  const overviewPositionControl = document.getElementById("overview-position");
   const overviewOverlayControl = document.getElementById("overview-overlay");
   const diagramsRoot = document.getElementById("diagrams");
   const legendRoot = document.getElementById("legend");
@@ -17,6 +18,7 @@
   const pageViews = document.querySelectorAll("[data-page-view]");
   const pageLinks = document.querySelectorAll("[data-page-link]");
   const storageKey = "guitar-diagrams-project-v2";
+  const defaultOverviewMode = defaultData.modes.find((mode) => mode.name === "Ionian") || defaultData.modes[0];
 
   let project = loadSavedProject() || {
     schemaVersion: 1,
@@ -24,7 +26,8 @@
       view: "combined",
       overlay: "none",
       fretSpacing: "compact",
-      overviewFocus: "all",
+      overviewMode: defaultOverviewMode.id,
+      overviewPosition: "all",
       overviewOverlay: "characteristic"
     },
     data: structuredClone(defaultData)
@@ -61,20 +64,17 @@
 
   function normalizeProject(candidate) {
     const normalized = structuredClone(candidate);
+    const legacyOverviewFocus = normalized && normalized.settings
+      ? normalized.settings.overviewFocus
+      : undefined;
     if (normalized && normalized.settings && normalized.settings.overlay === undefined) {
       normalized.settings.overlay = "none";
     }
     if (normalized && normalized.settings && normalized.settings.fretSpacing === undefined) {
       normalized.settings.fretSpacing = "compact";
     }
-    if (normalized && normalized.settings && normalized.settings.overviewFocus === undefined) {
-      normalized.settings.overviewFocus = "all";
-    }
     if (normalized && normalized.settings && normalized.settings.overviewOverlay === undefined) {
       normalized.settings.overviewOverlay = normalized.settings.overviewCharacteristic === false ? "none" : "characteristic";
-    }
-    if (normalized && normalized.settings) {
-      delete normalized.settings.overviewCharacteristic;
     }
     if (normalized && normalized.data && Array.isArray(normalized.data.modes)) {
       for (const mode of normalized.data.modes) {
@@ -94,7 +94,32 @@
         if (matchingDefault && !Array.isArray(family.chordFretsByString)) {
           family.chordFretsByString = structuredClone(matchingDefault.chordFretsByString);
         }
+        if (matchingDefault && !Array.isArray(family.scaleFretsByString)) {
+          family.scaleFretsByString = structuredClone(matchingDefault.scaleFretsByString);
+        }
+        if (matchingDefault && family.accent === undefined) {
+          family.accent = matchingDefault.accent;
+        }
       }
+    }
+    if (normalized && normalized.settings) {
+      const projectModes = normalized.data && Array.isArray(normalized.data.modes)
+        ? normalized.data.modes
+        : [];
+      const projectIonian = projectModes.find((mode) => mode.name === "Ionian") || projectModes[0];
+      if (normalized.settings.overviewMode === undefined) {
+        normalized.settings.overviewMode = legacyOverviewFocus && legacyOverviewFocus !== "all"
+          ? legacyOverviewFocus
+          : projectIonian ? projectIonian.id : defaultOverviewMode.id;
+      }
+      if (normalized.settings.overviewPosition === undefined) {
+        const legacyMode = legacyOverviewFocus && legacyOverviewFocus !== "all"
+          ? projectModes.find((mode) => mode.id === legacyOverviewFocus)
+          : null;
+        normalized.settings.overviewPosition = legacyMode ? legacyMode.position : "all";
+      }
+      delete normalized.settings.overviewFocus;
+      delete normalized.settings.overviewCharacteristic;
     }
     return normalized;
   }
@@ -106,11 +131,11 @@
     if (!Array.isArray(candidate.data.modes) || candidate.data.modes.length !== 7) {
       throw new Error("The project must contain seven mode diagrams.");
     }
-    const overviewFocuses = new Set(["all", ...candidate.data.modes.map((mode) => mode.id)]);
+    const overviewModes = new Set(candidate.data.modes.map((mode) => mode.id));
     if (!["full", "combined", "pentatonic"].includes(candidate.settings.view)
       || !["none", "characteristic", "triad", "seventh"].includes(candidate.settings.overlay)
       || !["compact", "guitar", "wide"].includes(candidate.settings.fretSpacing)
-      || !overviewFocuses.has(candidate.settings.overviewFocus)
+      || !overviewModes.has(candidate.settings.overviewMode)
       || !["none", "pentatonic", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)) {
       throw new Error("The project contains unsupported display settings.");
     }
@@ -131,6 +156,11 @@
       if (!family || !Number.isInteger(family.position) || family.position < 1
         || familyPositions.has(family.position) || !/^[CAGED]$/.test(family.cagedForm)
         || cagedForms.has(family.cagedForm)
+        || !/^#[0-9a-f]{6}$/i.test(family.accent)
+        || !Array.isArray(family.scaleFretsByString) || family.scaleFretsByString.length !== 6
+        || family.scaleFretsByString.some((frets) => !Array.isArray(frets) || frets.length === 0
+          || frets.some((fret) => !Number.isInteger(fret) || fret < 0 || fret > 30)
+          || new Set(frets).size !== frets.length)
         || !Array.isArray(family.chordFretsByString) || family.chordFretsByString.length !== 6
         || family.chordFretsByString.flat().length < 4
         || family.chordFretsByString.some((frets) => !Array.isArray(frets) || frets.length > 1
@@ -139,6 +169,10 @@
       }
       familyPositions.add(family.position);
       cagedForms.add(family.cagedForm);
+    }
+    if (candidate.settings.overviewPosition !== "all"
+      && !familyPositions.has(candidate.settings.overviewPosition)) {
+      throw new Error("The project contains an unsupported overview position.");
     }
 
     const ids = new Set();
@@ -154,12 +188,24 @@
       candidate.data.parentScale.pitchClasses[2],
       candidate.data.parentScale.pitchClasses[4]
     ]);
+    const parentScalePitchClasses = new Set(candidate.data.parentScale.pitchClasses);
     for (const family of candidate.data.positionFamilies) {
+      for (const [stringIndex, frets] of family.scaleFretsByString.entries()) {
+        for (const fret of frets) {
+          const pc = (candidate.data.strings[stringIndex].openPitchClass + fret) % 12;
+          if (!parentScalePitchClasses.has(pc)) {
+            throw new Error(`Position ${family.position} contains a note outside the parent scale.`);
+          }
+        }
+      }
       for (const [stringIndex, frets] of family.chordFretsByString.entries()) {
         for (const fret of frets) {
           const pc = (candidate.data.strings[stringIndex].openPitchClass + fret) % 12;
           if (!parentChordPitchClasses.has(pc)) {
             throw new Error(`Position ${family.position} contains a note outside the parent-major CAGED chord.`);
+          }
+          if (!family.scaleFretsByString[stringIndex].includes(fret)) {
+            throw new Error(`Position ${family.position} CAGED chord tones must stay inside its scale contour.`);
           }
         }
       }
@@ -210,19 +256,12 @@
       || [...modePositions].some((position) => !familyPositions.has(position))) {
       throw new Error("Every modal contour must belong to one of the five CAGED position families.");
     }
-    for (const family of candidate.data.positionFamilies) {
-      const familyModes = candidate.data.modes.filter((mode) => mode.position === family.position);
-      for (const [stringIndex, frets] of family.chordFretsByString.entries()) {
-        if (frets.some((fret) => familyModes.some((mode) => !mode.fretsByString[stringIndex].includes(fret)))) {
-          throw new Error(`Position ${family.position} CAGED chord tones must stay inside every contour in that family.`);
-        }
-      }
-    }
   }
 
   function preflightProject(candidate) {
     renderer.renderOverviewSvg(candidate.data, {
-      focusMode: candidate.settings.overviewFocus,
+      mode: candidate.settings.overviewMode,
+      position: candidate.settings.overviewPosition,
       overlay: candidate.settings.overviewOverlay
     });
     for (const mode of candidate.data.modes) {
@@ -240,18 +279,22 @@
     if (message) status.textContent = message;
   }
 
-  function populateOverviewFocusOptions() {
-    overviewFocusControl.innerHTML = `<option value="all">All positions</option>`
-      + project.data.modes.map((mode) => `<option value="${escapeHtml(mode.id)}">${escapeHtml(mode.name)}</option>`).join("");
+  function populateOverviewOptions() {
+    overviewModeControl.innerHTML = project.data.modes
+      .map((mode) => `<option value="${escapeHtml(mode.id)}">${escapeHtml(mode.name)} · ${escapeHtml(mode.tonic)} tonic</option>`)
+      .join("");
+    const families = [...project.data.positionFamilies].sort((a, b) => a.position - b.position);
+    overviewPositionControl.innerHTML = `<option value="all">All 5 positions</option>`
+      + families.map((family) => `<option value="${family.position}">P${family.position} · ${escapeHtml(family.cagedForm)}-form</option>`).join("");
   }
 
   function applyControls() {
     document.querySelector(`input[name="view"][value="${project.settings.view}"]`).checked = true;
     overlayControl.value = project.settings.overlay;
     fretSpacingControl.value = project.settings.fretSpacing;
-    overviewFocusControl.value = project.settings.overviewFocus;
+    overviewModeControl.value = project.settings.overviewMode;
+    overviewPositionControl.value = String(project.settings.overviewPosition);
     overviewOverlayControl.value = project.settings.overviewOverlay;
-    overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
   }
 
   function renderLegend() {
@@ -291,9 +334,9 @@
   }
 
   function renderOverview() {
-    overviewOverlayControl.disabled = project.settings.overviewFocus === "all";
     overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, {
-      focusMode: project.settings.overviewFocus,
+      mode: project.settings.overviewMode,
+      position: project.settings.overviewPosition,
       overlay: project.settings.overviewOverlay
     });
   }
@@ -329,7 +372,7 @@
       const accessibleModeTitle = `${mode.tonic} ${mode.name}`;
       return `<article class="diagram-card print-card" data-mode-id="${modeId}">
         <div class="diagram-heading">
-          <div><h2>${escapeHtml(modeTitle)}</h2><p>Position ${escapeHtml(mode.position)} · root on string ${escapeHtml(mode.anchor.string)}, fret ${escapeHtml(mode.anchor.fret)}</p></div>
+          <div><h2>${escapeHtml(modeTitle)}</h2><p>Tonic-start reference shape · root on string ${escapeHtml(mode.anchor.string)}, fret ${escapeHtml(mode.anchor.fret)}</p></div>
           <div class="diagram-actions">
             <button type="button" data-action="export" data-mode-id="${modeId}" aria-label="Export ${escapeHtml(accessibleModeTitle)} SVG">Export SVG</button>
             <button type="button" data-action="print" data-mode-id="${modeId}" aria-label="Print ${escapeHtml(accessibleModeTitle)} box">Print this box</button>
@@ -361,10 +404,16 @@
 
   function exportOverview() {
     const markup = renderer.renderOverviewSvg(project.data, {
-      focusMode: project.settings.overviewFocus,
+      mode: project.settings.overviewMode,
+      position: project.settings.overviewPosition,
       overlay: project.settings.overviewOverlay
     });
-    const filename = `${renderer.overviewFileStem(project.data, project.settings.overviewFocus)}.svg`;
+    const filename = `${renderer.overviewFileStem(
+      project.data,
+      project.settings.overviewMode,
+      project.settings.overviewPosition,
+      project.settings.overviewOverlay
+    )}.svg`;
     downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);
     status.textContent = `Exported the connected-position overview as ${filename}.`;
   }
@@ -410,8 +459,14 @@
     }
   }
 
-  overviewFocusControl.addEventListener("change", (event) => {
-    project.settings.overviewFocus = event.target.value;
+  overviewModeControl.addEventListener("change", (event) => {
+    project.settings.overviewMode = event.target.value;
+    saveProject();
+    renderOverview();
+  });
+
+  overviewPositionControl.addEventListener("change", (event) => {
+    project.settings.overviewPosition = event.target.value === "all" ? "all" : Number(event.target.value);
     saveProject();
     renderOverview();
   });
@@ -476,7 +531,7 @@
       validateProject(candidate);
       preflightProject(candidate);
       project = candidate;
-      populateOverviewFocusOptions();
+      populateOverviewOptions();
       applyControls();
       render();
       saveProject(`Imported ${file.name}.`);
@@ -490,7 +545,7 @@
   window.addEventListener("afterprint", clearPrintTarget);
   window.addEventListener("hashchange", () => activatePage(true));
   window.addEventListener("pageshow", () => activatePage(false));
-  populateOverviewFocusOptions();
+  populateOverviewOptions();
   applyControls();
   render();
   activatePage(false);
