@@ -4,6 +4,14 @@ An editable, print-ready connected fretboard for learning the seven relative mod
 
 Live site: [zendril.github.io/guitar-diagrams](https://zendril.github.io/guitar-diagrams/)
 
+## Six-box method
+
+Choose **Six-box method** in the main navigation, or open [six-boxes.html](six-boxes.html). This separate connected map follows [Fret Science’s demonstration of Robb Cappelletto’s exercise](https://www.youtube.com/watch?v=MY1F4-id64k&t=83s): behind, straddling, and in front of an E-string root, then the same three approaches around an A-string root. The map orders the two groups by their fret locations in each key; D starts with the A-string group. Complete movable shapes near the nut are placed an octave higher when necessary to avoid negative frets.
+
+Select any of 12 major keys, all six boxes or an individual focus, major scale / major pentatonic / major triad, and interval or note labels. The front scale shapes have three notes per string; their pentatonic and triad shapes use the lesson’s longer diagonal routes, including Keith’s additions. G-, E-, C-, and A-form regions are represented; this exercise omits the D-form and does not change the existing five CAGED regions. This view covers the original major-key routine, not the later modal variations.
+
+Use **Next key in fifths** for the daily routine, **Export SVG** for a standalone vector diagram, or **Print / save PDF**. Selections have their own browser storage and URL parameters (`tonic`, `box`, `palette`, `labels`). The original five-box project data is untouched. No build step or network connection is needed. `node tests/verify-six-boxes.js` checks the source shapes, diagonal routes, pitch membership, root placement, and all 504 key/palette/focus/label combinations; it is included in `npm test`.
+
 ## Open the editor
 
 Open `index.html` directly in a browser. No installation or build step is required. Use the top navigation to switch between the interactive fretboard and the printable theory cheat sheet; `index.html#cheat-sheet` opens the reference directly.

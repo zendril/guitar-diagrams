@@ -1,0 +1,21 @@
+.page-nav { flex-wrap: wrap; }
+.six-positions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; padding: .5rem 1rem 1rem; }
+.six-positions button { display: grid; gap: .2rem; justify-content: start; text-align: left; border-left: 5px solid var(--box-color); }
+.six-positions button[aria-pressed="true"] { background: #eef2f7; outline: 2px solid var(--box-color); outline-offset: 1px; }
+.six-positions small { color: var(--muted); font-size: .78rem; }
+.six-guide { width: min(1120px, calc(100% - 2rem)); margin: 0 auto 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; }
+.six-guide h2 { font-size: 1.1rem; }
+.six-guide p { color: var(--muted); line-height: 1.55; font-size: .9rem; }
+.six-source { grid-column: 1 / -1; margin-top: 0; }
+.six-guide a { color: var(--accent); }
+@media (max-width: 700px) {
+  .six-positions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .six-guide { grid-template-columns: 1fr; }
+}
+@media print {
+  @page { size: landscape; margin: 10mm; }
+  .page-nav, .site-header, .overview-control-grid, .no-print, .status, .six-guide { display: none !important; }
+  .overview-card { width: 100%; margin: 0; border: 0; box-shadow: none; break-after: auto; }
+  .overview-frame { overflow: visible; }
+  .overview-frame svg { width: 100%; min-width: 0; height: auto; }
+}
