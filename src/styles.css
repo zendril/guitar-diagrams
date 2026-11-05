@@ -86,6 +86,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .overview-copy p { max-width: 48rem; margin: 0.3rem 0 0; color: var(--muted); font-size: 0.88rem; }
 .overview-control-grid { display: grid; grid-template-columns: repeat(4, minmax(10rem, 1fr)); gap: 0.65rem; }
 .overview-control-help { margin: 0; color: var(--muted); font-size: 0.84rem; line-height: 1.45; }
+.pentatonic-root-controls { display: flex; flex-wrap: wrap; gap: 0.65rem 1.2rem; align-items: center; padding: 0.75rem; border: 1px solid var(--line); border-radius: 0.45rem; background: #f8fafc; }
+.pentatonic-root-controls .select-control { flex: 0 1 17rem; min-width: 0; }
+.pentatonic-root-controls .overview-control-help { flex: 1 1 20rem; }
 .overview-selection-summary { margin: 0; padding: 0.65rem 0.75rem; border-left: 3px solid var(--accent); background: #f5f8fc; font-size: 0.88rem; line-height: 1.4; }
 .overview-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-start; }
 .project-actions { display: grid; }

@@ -23,6 +23,8 @@ The four diagram controls answer separate questions:
 - **CAGED position focus** chooses one physical parent-major chord region (`P1 E-form` through `P5 G-form`) or all five.
 - **Learning highlight** compares the mode's pentatonic core, characteristic tones, tonic triad, tonic seventh chord, or the parent-major CAGED voicing.
 
+With **Pentatonic only — across neck**, an additional **Pentatonic roots** selector shows the relative **major root**, **minor root**, or **both** (the default). Blue circles mark major roots; purple squares mark minor roots throughout the displayed neck. For example, G major and E minor pentatonic share G–A–B–D–E; A Dorian's core instead pairs C major with A minor pentatonic. Switching root markers keeps the same notes, positions, and interval labels measured from the selected modal tonic. The choice is saved with the project and included in SVG exports and printing. Locrian's project-defined subset keeps its modal tonic marker because it has no standard major/minor pentatonic pair.
+
 The diagram deliberately shows two coordinate systems at once. Seven Roman-numeral landmarks identify the relative modal roots; five P-labels identify the CAGED regions. They overlap, but do not map one-to-one. Select A + Dorian, for example, and the map derives the G-major note collection: B Phrygian and C Lydian remain separate root landmarks inside the same broad C-form region.
 
 The editor also provides:

@@ -8,6 +8,9 @@
   const overviewModeControl = document.getElementById("overview-mode");
   const overviewPositionControl = document.getElementById("overview-position");
   const overviewOverlayControl = document.getElementById("overview-overlay");
+  const pentatonicRootControls = document.getElementById("pentatonic-root-controls");
+  const overviewPentatonicRootsControl = document.getElementById("overview-pentatonic-roots");
+  const pentatonicRootHelp = document.getElementById("pentatonic-root-help");
   const overviewSelectionSummary = document.getElementById("overview-selection-summary");
   const status = document.getElementById("status");
   const importInput = document.getElementById("import-project");
@@ -27,7 +30,8 @@
       overviewTonicPitchClass: defaultTonicPitchClass,
       overviewMode: "ionian",
       overviewPosition: "all",
-      overviewOverlay: "characteristic"
+      overviewOverlay: "characteristic",
+      overviewPentatonicRoots: "both"
     },
     data: structuredClone(defaultData)
   };
@@ -145,6 +149,9 @@
     if (normalized.settings.overviewOverlay === undefined) {
       normalized.settings.overviewOverlay = normalized.settings.overviewCharacteristic === false ? "none" : "characteristic";
     }
+    if (normalized.settings.overviewPentatonicRoots === undefined) {
+      normalized.settings.overviewPentatonicRoots = "both";
+    }
 
     delete normalized.settings.overviewFocus;
     delete normalized.settings.overviewParentPitchClass;
@@ -167,7 +174,8 @@
       || candidate.settings.overviewTonicPitchClass < 0
       || candidate.settings.overviewTonicPitchClass > 11
       || !overviewModes.has(candidate.settings.overviewMode)
-      || !["none", "pentatonic", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)) {
+      || !["none", "pentatonic", "characteristic", "triad", "seventh", "caged"].includes(candidate.settings.overviewOverlay)
+      || !["both", "major", "minor"].includes(candidate.settings.overviewPentatonicRoots)) {
       throw new Error("The project contains unsupported display settings.");
     }
     if (!Array.isArray(candidate.data.strings) || candidate.data.strings.length !== 6) {
@@ -319,7 +327,8 @@
       tonicPitchClass: candidate.settings.overviewTonicPitchClass,
       mode: candidate.settings.overviewMode,
       position: candidate.settings.overviewPosition,
-      overlay: candidate.settings.overviewOverlay
+      overlay: candidate.settings.overviewOverlay,
+      pentatonicRoots: candidate.settings.overviewPentatonicRoots
     });
   }
 
@@ -422,6 +431,35 @@
       ? ` · modal tonic on low-E fret ${context.selectedAnchorFret}`
       : "";
     overviewSelectionSummary.textContent = `${tonicName} ${modeName} · relative parent ${parentName} major${tonicLocation} · ${positionText}.`;
+    if (project.settings.overviewOverlay === "pentatonic") {
+      const roots = renderer.pentatonicRootsFor(context.data, context.selectedMode);
+      const kinds = project.settings.overviewPentatonicRoots === "both" ? ["major", "minor"] : [project.settings.overviewPentatonicRoots];
+      overviewSelectionSummary.textContent += roots
+        ? ` Pentatonic roots: ${kinds.map((kind) => `${roots[kind].tonic} ${kind}`).join(" + ")}.`
+        : ` Project-defined pentatonic: ${tonicName} tonic marked.`;
+    }
+  }
+
+  function renderPentatonicRootControls(context) {
+    pentatonicRootControls.hidden = project.settings.overviewOverlay !== "pentatonic";
+    const roots = renderer.pentatonicRootsFor(context.data, context.selectedMode);
+    overviewPentatonicRootsControl.disabled = !roots;
+    if (!roots) {
+      overviewPentatonicRootsControl.innerHTML = '<option value="both">Mode tonic only</option>';
+      overviewPentatonicRootsControl.value = "both";
+      pentatonicRootHelp.textContent = `This project-defined core has no standard relative major/minor pentatonic pair. The ring marks ${context.selectedMode.tonic}, the modal tonic.`;
+      return;
+    }
+    overviewPentatonicRootsControl.innerHTML = [
+      ["both", `Both — ${roots.major.tonic} major / ${roots.minor.tonic} minor`],
+      ["major", `Major root — ${roots.major.tonic}`],
+      ["minor", `Minor root — ${roots.minor.tonic}`]
+    ].map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
+    overviewPentatonicRootsControl.value = project.settings.overviewPentatonicRoots;
+    const markerDescriptions = [];
+    if (project.settings.overviewPentatonicRoots !== "minor") markerDescriptions.push(`Blue circles mark ${roots.major.tonic}, the major root`);
+    if (project.settings.overviewPentatonicRoots !== "major") markerDescriptions.push(`Purple squares mark ${roots.minor.tonic}, the minor root`);
+    pentatonicRootHelp.textContent = `${roots.major.tonic} major and ${roots.minor.tonic} minor pentatonic share these five notes. ${markerDescriptions.join("; ")}. Interval labels still use ${context.selectedMode.tonic} as 1.`;
   }
 
   function renderOverview() {
@@ -429,10 +467,12 @@
       tonicPitchClass: project.settings.overviewTonicPitchClass,
       mode: project.settings.overviewMode,
       position: project.settings.overviewPosition,
-      overlay: project.settings.overviewOverlay
+      overlay: project.settings.overviewOverlay,
+      pentatonicRoots: project.settings.overviewPentatonicRoots
     };
     const context = renderer.deriveOverviewContext(project.data, options);
     overviewFrame.innerHTML = renderer.renderOverviewSvg(project.data, options);
+    renderPentatonicRootControls(context);
     renderSelectionSummary(context);
   }
 
@@ -482,14 +522,16 @@
       tonicPitchClass: project.settings.overviewTonicPitchClass,
       mode: project.settings.overviewMode,
       position: project.settings.overviewPosition,
-      overlay: project.settings.overviewOverlay
+      overlay: project.settings.overviewOverlay,
+      pentatonicRoots: project.settings.overviewPentatonicRoots
     });
     const filename = `${renderer.overviewFileStem(
       project.data,
       project.settings.overviewTonicPitchClass,
       project.settings.overviewMode,
       project.settings.overviewPosition,
-      project.settings.overviewOverlay
+      project.settings.overviewOverlay,
+      project.settings.overviewPentatonicRoots
     )}.svg`;
     downloadBlob(`<?xml version="1.0" encoding="UTF-8"?>\n${markup}\n`, "image/svg+xml;charset=utf-8", filename);
     status.textContent = `Exported the connected-position overview as ${filename}.`;
@@ -550,6 +592,12 @@
 
   overviewOverlayControl.addEventListener("change", (event) => {
     project.settings.overviewOverlay = event.target.value;
+    saveProject();
+    renderOverview();
+  });
+
+  overviewPentatonicRootsControl.addEventListener("change", (event) => {
+    project.settings.overviewPentatonicRoots = event.target.value;
     saveProject();
     renderOverview();
   });

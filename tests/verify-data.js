@@ -169,7 +169,7 @@ const ids = [...indexHtml.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
 assert.equal(ids.length, new Set(ids).size, "Every static page ID must be unique");
 assert.equal(occurrences(indexHtml, 'data-page-view="'), 2, "The single HTML file must retain the map and theory pages");
 
-for (const id of ["overview-tonic", "overview-mode", "overview-position", "overview-overlay"]) {
+for (const id of ["overview-tonic", "overview-mode", "overview-position", "overview-overlay", "overview-pentatonic-roots"]) {
   assert(indexHtml.includes(`id="${id}"`), `The connected map must include the ${id} control`);
 }
 assert(indexHtml.includes("Tonic / starting note"));
@@ -191,10 +191,10 @@ for (const removedSourceName of ["diagramContainer", "renderDiagrams", "exportMo
 assert(!appSource.includes("renderer.renderModeSvg"), "The browser app must render only the connected overview");
 assert(indexHtml.includes('id="download-project"') && indexHtml.includes('id="import-project-button"'), "Project JSON actions must remain available in the top box");
 
-assert(indexHtml.includes('src/styles.css?v=6')
-  && indexHtml.includes('src/diagram-data.js?v=6')
-  && indexHtml.includes('src/render.js?v=6')
-  && indexHtml.includes('src/app.js?v=6'), "Every browser asset must use the revision-6 cache key");
+assert(indexHtml.includes('src/styles.css?v=7')
+  && indexHtml.includes('src/diagram-data.js?v=7')
+  && indexHtml.includes('src/render.js?v=7')
+  && indexHtml.includes('src/app.js?v=7'), "Every browser asset must use the revision-7 cache key");
 
 // Saved v5 projects used a coupled mode/position setting. Keep that migration path explicit.
 assert(appSource.includes('const storageKey = "guitar-diagrams-project-v2"'), "Migration must keep reading the existing local-storage key");
@@ -216,4 +216,4 @@ assert(appSource.includes("overviewModeControl.addEventListener"));
 assert(appSource.includes("overviewPositionControl.addEventListener"));
 assert(appSource.includes("overviewOverlayControl.addEventListener"));
 
-console.log("Verified revision-6 data, transposition, four-control UI, migration, and top-only architecture.");
+console.log("Verified theory data, transposition, diagram controls, migration, and top-only architecture.");

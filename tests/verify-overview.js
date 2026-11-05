@@ -274,4 +274,56 @@ assert.equal(renderer.overviewFocusMode(data, "a-dorian"), data.modes[1]);
 assert.equal(renderer.overviewFocusMode(data, "dorian"), data.modes[1]);
 assert.equal(renderer.overviewFocusMode(data, "not-a-mode"), null);
 
+// Root markers follow the actual five-note core, including minor cores whose
+// relative major is not the parent major (A Dorian pairs C major with A minor).
+let rootCombinationCount = 0;
+for (const tonicPitchClass of tonicPitchClasses) {
+  for (const mode of modeKeys) {
+    const context = renderer.deriveOverviewContext(data, { tonicPitchClass, mode });
+    const roots = renderer.pentatonicRootsFor(context.data, context.selectedMode);
+    const majorCore = ["ionian", "lydian", "mixolydian"].includes(mode);
+    const expectedMajor = (tonicPitchClass + (majorCore ? 0 : 3)) % 12;
+    const expectedMinor = (tonicPitchClass + (majorCore ? 9 : 0)) % 12;
+    if (mode === "locrian") {
+      assert.equal(roots, null, "The Locrian subset must not acquire a false major/minor pair");
+    } else {
+      assert.equal(roots.major.tonicPitchClass, expectedMajor);
+      assert.equal(roots.minor.tonicPitchClass, expectedMinor);
+      assert.equal(roots.major.tonic, context.data.pitchClassNames[expectedMajor]);
+      assert.equal(roots.minor.tonic, context.data.pitchClassNames[expectedMinor]);
+    }
+    const { entries } = physicalEntries(context);
+    for (const position of ["all", 1]) {
+      for (const pentatonicRoots of ["both", "major", "minor"]) {
+        const svg = renderer.renderOverviewSvg(data, { tonicPitchClass, mode, position, overlay: "pentatonic", pentatonicRoots });
+        const groups = noteGroups(svg);
+        for (const [kind, expectedPc] of [["major", expectedMajor], ["minor", expectedMinor]]) {
+          const marked = groups.filter((group) => group.includes(`data-pentatonic-root="${kind}"`));
+          const expected = roots && (pentatonicRoots === "both" || pentatonicRoots === kind)
+            ? entries.filter((entry) => entry.pc === expectedPc) : [];
+          assert.deepEqual(marked.map(noteGroupKey), expected.map((entry) => `${entry.string.number}:${entry.fret}`), `${tonicPitchClass} ${mode}: every ${kind} root must be marked, including outside the focused region`);
+          for (const group of marked) {
+            assert(group.includes('data-overview-pentatonic-note="true"'));
+            assert(group.includes(`${kind} pentatonic root</title>`));
+            assert(group.includes(kind === "major" ? '<circle class="overview-pentatonic-root major"' : '<rect class="overview-pentatonic-root minor"'), "Root identity must use different shapes as well as colors");
+          }
+        }
+        assert.equal(occurrences(svg, '<circle class="overview-root-ring"'), roots ? 0 : entries.filter((entry) => entry.pc === tonicPitchClass).length, "Pentatonic markers replace modal rings only for a standard major/minor pair");
+        assert.equal(occurrences(svg, '<circle class="overview-modal-anchor-ring"'), 0, "Modal landmark rings must not compete with the pentatonic root markers");
+        assert.equal(occurrences(svg, 'data-overview-pentatonic-note="true"'), entries.filter((entry) => entry.tone.core).length, "Root selection must preserve the five-note palette");
+        assert.deepEqual(groups.map(noteGroupDegree), entries.map((entry) => renderer.prettyDegree(entry.tone.degree)), "Root markers must preserve labels from the selected modal tonic");
+        rootCombinationCount += 1;
+      }
+    }
+  }
+}
+assert.deepEqual(renderer.pentatonicRootsFor(dorianContext.data, dorianContext.selectedMode), {
+  major: { tonicPitchClass: 0, tonic: "C" },
+  minor: { tonicPitchClass: 9, tonic: "A" }
+});
+assert.equal(renderer.renderOverviewSvg(data, { overlay: "pentatonic", pentatonicRoots: "invalid" }), renderer.renderOverviewSvg(data, { overlay: "pentatonic", pentatonicRoots: "both" }));
+assert.equal(renderer.renderOverviewSvg(data, { overlay: "characteristic", pentatonicRoots: "minor" }), renderer.renderOverviewSvg(data, { overlay: "characteristic" }), "Root selection applies only to the pentatonic view");
+assert.equal(new Set(["both", "major", "minor"].map((roots) => renderer.overviewFileStem(data, 7, "ionian", "all", "pentatonic", roots))).size, 3, "Root selections need distinct SVG filenames");
+
 console.log(`Verified ${combinationCount} connected-map combinations, transposition, anchors, CAGED degrees, independence, filenames, and legacy rendering.`);
+console.log(`Verified ${rootCombinationCount} pentatonic root combinations, relative pairs, root shapes, unchanged labels, and Locrian fallback.`);

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Relative Modes of the Major Scale</title>
-  <link rel="stylesheet" href="src/styles.css?v=6">
+  <link rel="stylesheet" href="src/styles.css?v=7">
 </head>
 <body>
   <nav class="page-nav" aria-label="Primary">
@@ -57,6 +57,17 @@
             </label>
           </div>
           <p class="overview-control-help">The tonic chooses home. The mode sets its interval formula and relative parent scale. The CAGED position changes only the physical neck region.</p>
+          <div id="pentatonic-root-controls" class="pentatonic-root-controls" hidden>
+            <label class="select-control" for="overview-pentatonic-roots">
+              Pentatonic roots
+              <select id="overview-pentatonic-roots" aria-describedby="pentatonic-root-help">
+                <option value="both">Both roots</option>
+                <option value="major">Major root</option>
+                <option value="minor">Minor root</option>
+              </select>
+            </label>
+            <p id="pentatonic-root-help" class="overview-control-help"></p>
+          </div>
           <p id="overview-selection-summary" class="overview-selection-summary" aria-live="polite"></p>
           <div class="overview-actions no-print">
             <button type="button" id="export-overview">Export SVG</button>
@@ -205,6 +216,7 @@
               </dl>
               <p class="note-callout">Hollow notes are not wrong or disposable. They are outside the five-note core and often contain the mode's defining sound.</p>
               <p class="fine-print">Locrian uses the project-defined subset <code>1 ♭3 4 ♭5 ♭7</code>; there is no single standard “Locrian pentatonic.”</p>
+              <p>In <strong>Pentatonic only</strong>, choose <strong>Pentatonic roots</strong> to mark the relative major root, minor root, or both. Blue circles mark the major root; purple squares mark the minor root. For example, G major and E minor pentatonic share the same five notes. Interval labels still use the selected modal tonic as <code>1</code>. The Locrian subset keeps its modal tonic marker.</p>
             </section>
 
             <section class="cheat-block" aria-labelledby="practice-heading">
@@ -235,8 +247,8 @@
     </section>
   </main>
 
-  <script src="src/diagram-data.js?v=6"></script>
-  <script src="src/render.js?v=6"></script>
-  <script src="src/app.js?v=6"></script>
+  <script src="src/diagram-data.js?v=7"></script>
+  <script src="src/render.js?v=7"></script>
+  <script src="src/app.js?v=7"></script>
 </body>
 </html>
