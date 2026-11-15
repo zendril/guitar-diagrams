@@ -4,6 +4,34 @@ An editable, print-ready connected fretboard for learning the seven relative mod
 
 Live site: [zendril.github.io/guitar-diagrams](https://zendril.github.io/guitar-diagrams/)
 
+## Circle of fifths
+
+Choose **Circle of fifths** in the navigation, or open [circle-of-fifths.html](circle-of-fifths.html). Click a slice to select its major key: the outer ring shows major keys, the middle ring shows their relative minors, and the inner ring counts sharps or flats. The chord boxes follow circle order **IV–I–V–ii–vi–iii–vii°**, with a **M M M m m m dim** reference row above the wheel. The three neighboring relative minors are also labeled **ii–vi–iii** inside the circle. A side reference gives the shared key signature, major/minor pairs, and chords in scale order.
+
+Use the selector or **Fourths / Fifths** buttons to change keys. With the circle focused, arrow keys move between keys; Home returns to C. All 12 slices are available, with B/C♭, F♯/G♭, and D♭/C♯ spellings selectable separately. Chord names follow the selected spelling; the wheel shows nearby conventional key spellings and explains enharmonic equivalents when needed. Selection is saved separately in this browser and in the `key` URL parameter (a sharp is URL-encoded as `%23`). No build step or network connection is required. `node tests/verify-circle-of-fifths.js` checks all 15 spellings, signatures, chord families, and circle placements; it is included in `npm test`.
+
+Choose **Root / Chord** to sustain a single root note or a full major, minor, or diminished triad. Click a major key, its relative minor, or a chord box; chord boxes play their own harmony without changing the selected key. For example, C major sounds C–E–G, Am sounds A–C–E, and Bdim sounds B–D–F. Switching modes updates the current sound. **Mute / Unmute** stays in effect when changing notes or modes, and one volume slider controls the whole sound. **Play drone / Play chord** starts the current selection; page load and mode changes before playback stay silent. With the circle focused, **M** plays its relative minor and **Enter / Space** plays its major key. Smooth sine tones use roots in C3–B3 with chord tones voiced above; the chord mix is normalized to keep its level comparable to the root. Audio stops when leaving the page. `node tests/verify-drone-audio.js` verifies tuning, chord voicings, mode switching, mute behavior, audio cleanup, and rapid-selection/startup races.
+
+## Chord playground
+
+Choose **Chord playground** in the navigation, or open [chord-playground.html](chord-playground.html). This separate page combines a chord explorer with a progression player. The existing Circle of fifths page keeps its original controls and behavior.
+
+Set a **Home key** for the Roman-numeral reference, then choose a root on the wheel or in the selector. The home key stays fixed as you try chords. The wheel's outer boxes show the key's diatonic chords; the selected root's box reflects its current variation. The middle ring offers relative minors. Choose major, minor, dominant 7, major 7, minor 7, sus4, diminished, sus2, add9, dominant 9, or minor 7♭5. The builder shows chord tones, interval formula, degree, and every chord-tone inversion. Selecting a root, variation, or inversion plays the chord; **Play chord / Stop chord**, **Mute**, and **Volume** control the sustained sound. Arrow keys move by fifths, Enter/Space plays, and M chooses a relative minor.
+
+Type or paste a sequence; each plain chord lasts one bar of four quarter-note beats:
+
+```text
+c7 c7 c7 c7 f7 f7 c7 c7 g7 f7 c7 c7
+```
+
+The editor accepts lowercase roots, sharps/flats, whitespace, newlines, and optional `|` bar lines. Suffixes distinguish `C7` (dominant), `Cmaj7` or `CM7` (major seventh), and `Cm7` (minor seventh). Share a bar with explicit lengths, such as `Dm7:2 G7:2 | Cmaj7`; lengths are 1–4 beats and each bar must total four. Slash notation chooses a chord-tone bass, such as `C7/E` or `C9/D`. Invalid chords, incomplete bars, and non-chord bass notes are explained before playback; progressions can contain up to 256 bars.
+
+Use **Add bar** (or a shorter length) from the builder, or click a chord tile and **Replace selected**. Presets include the original 12-bar blues, a V7 turnaround, major/minor ii–V–I, I–V–vi–IV, and a shared-bar ii–V–I. **Transpose** moves the entire progression and home key together, preserving durations, variations, and inversions. Merely changing Home key changes the reference labels.
+
+Set **40–240 BPM**, then play, pause/resume, or stop. **Loop**, a one-bar **Count-in** on the first pass, and an optional **Metronome** support practice. Choose sustained chords, quarter-note down strums, alternating eighth-note strums, or a D–DU–UDU pop pattern. Strum patterns restart at each chord change. Bar tiles, beat dots, and current/next chord labels follow the audio. Pause to change tempo or pattern; editing the progression stops it. Sound uses synthesized sine voices with staggered notes for strums, rather than sampled guitar audio. Mute and volume affect both auditions and the player. Audio stops when leaving the page, and long timing interruptions pause playback instead of playing missed events together.
+
+The sequence and settings save separately in this browser. Page load is silent, and no build step, external library, or network connection is required. `node tests/verify-chord-playground.js` checks chord spellings, inversions, parsing, transposition, degree references, and rhythm schedules; `node tests/verify-playground-audio.js` checks audio timing, looping, pause/resume, mute, cleanup, and startup races. Both are included in `npm test`.
+
 ## Six-box method
 
 Choose **Six-box method** in the main navigation, or open [six-boxes.html](six-boxes.html). This separate connected map follows [Fret Science’s demonstration of Robb Cappelletto’s exercise](https://www.youtube.com/watch?v=MY1F4-id64k&t=83s): behind, straddling, and in front of an E-string root, then the same three approaches around an A-string root. The map orders the two groups by their fret locations in each key; D starts with the A-string group. Complete movable shapes near the nut are placed an octave higher when necessary to avoid negative frets.

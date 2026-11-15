@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "test": "node tests/verify-data.js && node tests/verify-six-boxes.js",
+    "test": "node tests/verify-data.js && node tests/verify-six-boxes.js && node tests/verify-circle-of-fifths.js && node tests/verify-drone-audio.js && node tests/verify-chord-playground.js && node tests/verify-playground-audio.js",
     "export": "node scripts/export-svg.js"
   }
 }

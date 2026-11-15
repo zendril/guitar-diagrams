@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore chord variations, build a progression, and play along with a looping chord player, strum patterns, inversions, and a metronome.">
+  <title>Chord playground · Guitar Diagrams</title>
+  <link rel="stylesheet" href="src/styles.css?v=7">
+  <link rel="stylesheet" href="src/chord-playground.css?v=1">
+  <script defer src="src/circle-of-fifths-engine.js?v=1"></script>
+  <script defer src="src/chord-playground-engine.js?v=1"></script>
+  <script defer src="src/chord-playground-render.js?v=1"></script>
+  <script defer src="src/chord-playground-audio.js?v=1"></script>
+  <script defer src="src/chord-playground.js?v=1"></script>
+</head>
+<body class="pg-page">
+  <a class="pg-skip" href="#pg-progression">Skip to progression</a>
+  <nav class="page-nav" aria-label="Primary">
+    <a href="index.html#map">Diagrams</a><a href="six-boxes.html">Six-box method</a>
+    <a href="circle-of-fifths.html">Circle of fifths</a><a href="chord-playground.html" aria-current="page">Chord playground</a>
+    <a href="index.html#cheat-sheet">Theory cheat sheet</a>
+  </nav>
+  <main>
+    <header class="site-header pg-header">
+      <div><p class="eyebrow">Hear the harmony · Build a loop</p><h1>Chord playground</h1><p class="lede">Try a chord. Build a progression. Play along.</p></div>
+      <div class="pg-sound no-print">
+        <button id="pg-mute" type="button" aria-pressed="false">Mute</button>
+        <label for="pg-volume">Volume <output id="pg-volume-value" for="pg-volume">25%</output><input id="pg-volume" type="range" min="0" max="100" value="25"></label>
+      </div>
+    </header>
+    <section class="pg-card" aria-labelledby="pg-explore-title">
+      <div class="pg-section-header"><div><p class="eyebrow">01 · Explore</p><h2 id="pg-explore-title">Find your next chord</h2></div>
+        <label class="select-control" for="pg-home">Home key<select id="pg-home"></select></label>
+      </div>
+      <div class="pg-explorer">
+        <div class="pg-wheel-wrap"><div id="pg-wheel"></div><p class="pg-help">Click a root to keep your chosen variation. Click a relative minor or degree box to try that chord. The home key stays fixed.</p></div>
+        <div class="pg-builder">
+          <div class="pg-chord-title"><h3 id="pg-chord-name">C7</h3><span id="pg-numeral" class="pg-pill">I7</span></div>
+          <div id="pg-notes" class="pg-notes" aria-label="Chord notes"></div><p id="pg-formula" class="pg-formula"></p>
+          <div class="pg-select-row">
+            <label class="select-control" for="pg-root">Chord root<select id="pg-root"></select></label>
+            <label class="select-control" for="pg-inversion">Inversion / bass<select id="pg-inversion"></select></label>
+          </div>
+          <fieldset class="pg-qualities"><legend>Chord variation</legend><div id="pg-qualities"></div></fieldset>
+          <div class="pg-builder-actions">
+            <button id="pg-audition" class="primary-action" type="button">Play chord</button>
+            <label class="select-control" for="pg-length">Length<select id="pg-length"><option value="4">4 beats · one bar</option><option value="2">2 beats · half bar</option><option value="1">1 beat</option><option value="3">3 beats</option></select></label>
+            <button id="pg-add" type="button">Add bar</button>
+          </div>
+          <div class="pg-edit-row"><span id="pg-edit-label">Select a chord tile below to edit it.</span><button id="pg-replace" type="button" disabled>Replace selected</button></div>
+          <p class="pg-help">Changing the home key updates the reference labels. Use Transpose below to move the whole progression.</p>
+        </div>
+      </div>
+    </section>
+    <section class="pg-card pg-player" aria-labelledby="pg-player-title">
+      <div class="pg-section-header"><div><p class="eyebrow">02 · Play along</p><h2 id="pg-player-title">Your progression</h2></div><span id="pg-summary" class="pg-pill"></span></div>
+      <div class="pg-preset-row">
+        <label class="select-control" for="pg-preset">Start with a preset<select id="pg-preset"></select></label><button id="pg-load-preset" type="button">Load preset</button>
+        <div class="pg-transpose"><span>Transpose</span><button id="pg-down" type="button" aria-label="Transpose down one semitone">−1</button><button id="pg-up" type="button" aria-label="Transpose up one semitone">+1</button>
+          <label class="pg-sr-only" for="pg-transpose-key">Transpose to key</label><select id="pg-transpose-key"></select><button id="pg-transpose" type="button">Apply key</button></div>
+      </div>
+      <label class="pg-text-label" for="pg-progression">Chord sequence</label>
+      <textarea id="pg-progression" rows="3" maxlength="16000" spellcheck="false" aria-describedby="pg-syntax pg-errors"></textarea>
+      <p id="pg-syntax" class="pg-help">One chord = four beats. Share a bar with <code>Dm7:2 G7:2</code>. Set an inversion with <code>C7/E</code>. Spaces, newlines, and optional <code>|</code> bar lines work; every bar must total four beats.</p>
+      <div id="pg-errors" class="pg-errors" role="alert" hidden></div>
+      <div class="pg-transport-settings">
+        <label class="select-control" for="pg-bpm">Tempo · BPM<input id="pg-bpm" type="number" min="40" max="240" step="1" value="90"></label>
+        <label class="select-control" for="pg-pattern">Playing pattern<select id="pg-pattern"></select></label>
+        <label class="pg-check"><input id="pg-loop" type="checkbox" checked> Loop</label>
+        <label class="pg-check"><input id="pg-count-in" type="checkbox" checked> Four-beat count-in</label>
+        <label class="pg-check"><input id="pg-metronome" type="checkbox"> Metronome</label>
+      </div>
+      <div class="pg-transport">
+        <button id="pg-play" class="primary-action" type="button">Play progression</button><button id="pg-stop" type="button">Stop</button>
+        <div class="pg-playing"><span id="pg-position">Ready · 4/4</span><strong id="pg-current">—</strong><span id="pg-next">Next: —</span></div>
+        <div class="pg-beats" aria-label="Beat indicator"><span>1</span><span>2</span><span>3</span><span>4</span></div>
+      </div>
+      <p id="pg-status" class="pg-status" role="status" aria-live="polite">Ready to play.</p>
+      <div id="pg-bars" class="pg-bars" aria-label="Progression bars"></div>
+      <p class="pg-help pg-footnote">Pause to change tempo or pattern. Editing the sequence stops playback. Each pattern restarts at a chord change. Synthesized chords, including inversions, share the same mute and volume controls.</p>
+    </section>
+    <p id="pg-save-status" class="pg-footer">Your progression and settings are saved in this browser.</p>
+    <noscript><p class="pg-footer">Enable JavaScript to use the chord explorer and progression player.</p></noscript>
+  </main>
+</body>
+</html>

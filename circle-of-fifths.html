@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore the circle of fifths, relative minor keys, key signatures, and the seven chords in any major key.">
+  <title>Circle of fifths · Guitar Diagrams</title>
+  <link rel="stylesheet" href="src/styles.css?v=7">
+  <link rel="stylesheet" href="src/circle-of-fifths.css?v=3">
+  <script defer src="src/circle-of-fifths-engine.js?v=1"></script>
+  <script defer src="src/circle-of-fifths-render.js?v=3"></script>
+  <script defer src="src/drone-audio.js?v=2"></script>
+  <script defer src="src/circle-of-fifths.js?v=3"></script>
+</head>
+<body class="fifths-page">
+  <nav class="page-nav" aria-label="Primary">
+    <a href="index.html#map">Diagrams</a>
+    <a href="six-boxes.html">Six-box method</a>
+    <a href="circle-of-fifths.html" aria-current="page">Circle of fifths</a>
+    <a href="chord-playground.html">Chord playground</a>
+    <a href="index.html#cheat-sheet">Theory cheat sheet</a>
+  </nav>
+  <main>
+    <header class="site-header">
+      <p class="eyebrow">Keys · Chords · Connections</p>
+      <h1>Circle of fifths</h1>
+      <p class="lede">Pick a key. Find its chords, relative minor, and the notes they share.</p>
+    </header>
+    <section class="fifths-card" aria-labelledby="fifths-heading">
+      <div class="fifths-toolbar">
+        <div>
+          <h2 id="fifths-heading">Chords in C major</h2>
+          <p>Circle order · <strong>M</strong> major · <strong>m</strong> minor · <strong>dim</strong> diminished</p>
+        </div>
+        <label class="select-control no-print" for="fifths-key">Major key / relative minor<select id="fifths-key"></select></label>
+      </div>
+      <div class="fifths-audio no-print" aria-label="Sustained audio">
+        <fieldset class="fifths-sound-mode">
+          <legend class="fifths-sr-only">Playback mode</legend>
+          <label><input class="fifths-sr-only" type="radio" name="fifths-sound-mode" value="root" checked>Root</label>
+          <label><input class="fifths-sr-only" type="radio" name="fifths-sound-mode" value="chord">Chord</label>
+        </fieldset>
+        <button id="fifths-drone-toggle" type="button">Play drone</button>
+        <div class="fifths-audio-copy">
+          <strong id="fifths-drone-status" role="status" aria-live="polite">Drone ready</strong>
+          <p id="fifths-audio-help">Click a key, relative minor, or chord to sustain its root note.</p>
+        </div>
+        <label class="fifths-volume" for="fifths-drone-volume">
+          <span>Volume <output id="fifths-drone-volume-value" for="fifths-drone-volume">25%</output></span>
+          <input id="fifths-drone-volume" type="range" min="0" max="100" value="25" step="1">
+        </label>
+      </div>
+      <div id="fifths-chords" class="fifths-chord-strip" aria-label="Seven chords in circle order"></div>
+      <div class="fifths-workspace">
+        <div class="fifths-wheel-panel">
+          <div class="fifths-directions no-print">
+            <button id="fifths-previous" type="button" title="Move one key counterclockwise">← Fourths</button>
+            <span>Click a slice to explore</span>
+            <button id="fifths-next" type="button" title="Move one key clockwise">Fifths →</button>
+          </div>
+          <div id="fifths-frame" class="fifths-frame"></div>
+          <p class="fifths-wheel-caption">Outer: <strong>major keys</strong> · Middle: <strong>relative minors</strong> · Inner: <strong>sharps / flats</strong></p>
+        </div>
+        <aside class="fifths-reference" aria-label="Selected key reference">
+          <section class="fifths-key-reference">
+            <p class="eyebrow">Same notes, different home</p>
+            <h3 id="fifths-relative-title">C major &amp; A minor</h3>
+            <p id="fifths-signature-summary"></p>
+            <p id="fifths-accidentals" class="fifths-accidentals"></p>
+            <button id="fifths-respell" type="button" class="no-print" hidden></button>
+          </section>
+          <section>
+            <h3>Three neighboring pairs</h3>
+            <p>The three major chords sit together. Their relative minors sit just inside.</p>
+            <div id="fifths-pairs" class="fifths-pairs"></div>
+            <p id="fifths-enharmonic-note" class="fifths-small" hidden></p>
+          </section>
+          <section>
+            <h3>In scale order</h3>
+            <div id="fifths-scale" class="fifths-scale" aria-label="Chords in scale order"></div>
+            <p id="fifths-diminished" class="fifths-small"></p>
+          </section>
+          <section class="fifths-reading-tip">
+            <h3>Read the chord boxes</h3>
+            <p>The boxes outside the circle show chords in the selected <strong>major key</strong>. Uppercase numerals are major; lowercase are minor; ° means diminished.</p>
+            <p>A box labeled ii uses a minor chord, even though the outer key ring below it names a major key.</p>
+          </section>
+        </aside>
+      </div>
+      <p id="fifths-announcement" class="fifths-sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+    <p class="fifths-footer">Clockwise adds a sharp or removes a flat; counterclockwise adds a flat or removes a sharp. Relative major and minor keys share a key signature.</p>
+    <noscript><p class="fifths-footer">Enable JavaScript to explore the interactive circle of fifths.</p></noscript>
+  </main>
+</body>
+</html>
